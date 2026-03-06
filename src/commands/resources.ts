@@ -4,7 +4,6 @@ import pc from 'picocolors'
 import { formatOutput, truncate } from '../utils/output'
 import type { ApiContext, ApiError, ValidationErrorItem } from '../utils/api-client'
 import { apiGet, apiPost, apiPut, apiDelete, resolveContext } from '../utils/api-client'
-import { availableRails, bankDetailFields } from '../utils/constants'
 
 function instancePath(ctx: ApiContext) {
   return `/v1/instances/${ctx.instanceId}`
@@ -769,21 +768,26 @@ export async function getQuoteFxRate(options: { from?: string, to?: string, json
   }
 }
 
-// Available (local reference data - no HTTP)
-export function listAvailableRails(options: { json: boolean }) {
-  printResult(availableRails, options.json, ['type', 'currency', 'country', 'name'])
+// Available
+export async function listAvailableRails(options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/available/rails`)
+    const list = extractList(res)
+    printResult(list, options.json, ['type', 'currency', 'country', 'name'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
 }
 
-export function getAvailableBankDetails(options: { rail: string, json: boolean }) {
-  const result = bankDetailFields[options.rail]
-  if (!result) {
-    const available = Object.keys(bankDetailFields).join(', ')
-    exitWithError(`Unknown rail "${options.rail}". Available rails: ${available}`, 1, options.json)
+export async function getAvailableBankDetails(options: { rail: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/available/bank-details/${options.rail}`)
+    printResult(res, options.json)
   }
-  if (options.json) {
-    console.log(formatOutput({ rail: options.rail, fields: result }, true))
-  }
-  else {
-    clack.note(result.map(f => `  ${f}`).join('\n'), `Required fields for ${options.rail}`)
+  catch (e) {
+    handleApiError(e, options.json)
   }
 }

@@ -12,15 +12,3 @@ export const bankDetailFields: Record<string, string[]> = {
   ach_cop_bitso: ['ach_cop_beneficiary_first_name', 'ach_cop_beneficiary_last_name', 'ach_cop_document_id', 'ach_cop_document_type', 'ach_cop_email', 'ach_cop_bank_code', 'ach_cop_bank_account', 'account_type'],
   international_swift: ['swift_code_bic', 'swift_account_holder_name', 'swift_account_number_iban', 'swift_beneficiary_address_line_1', 'swift_beneficiary_country', 'swift_beneficiary_city', 'swift_beneficiary_state_province_region', 'swift_beneficiary_postal_code', 'swift_bank_name', 'swift_bank_address_line_1', 'swift_bank_country', 'swift_bank_city', 'swift_bank_state_province_region', 'swift_bank_postal_code'],
 }
-
-export const availableRails = [
-  { type: 'ach', currency: 'USD', country: 'US', name: 'ACH' },
-  { type: 'wire', currency: 'USD', country: 'US', name: 'Domestic Wire' },
-  { type: 'rtp', currency: 'USD', country: 'US', name: 'RTP' },
-  { type: 'pix', currency: 'BRL', country: 'BR', name: 'PIX' },
-  { type: 'pix_safe', currency: 'BRL', country: 'BR', name: 'PIX Safe' },
-  { type: 'spei_bitso', currency: 'MXN', country: 'MX', name: 'SPEI' },
-  { type: 'transfers_bitso', currency: 'ARS', country: 'AR', name: 'Transfers 3.0' },
-  { type: 'ach_cop_bitso', currency: 'COP', country: 'CO', name: 'ACH Colombia' },
-  { type: 'international_swift', currency: 'USD', country: 'INTL', name: 'International SWIFT' },
-]

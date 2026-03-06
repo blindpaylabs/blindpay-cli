@@ -527,7 +527,7 @@ instances
   .action(opts => updateInstance(opts))
 
 // ── Available ───────────────────────────────────────────────────────────
-const available = program.command('available').description('Reference data (no API key required)')
+const available = program.command('available').description('Available payment rails and bank details')
   .addHelpText('after', `
 Examples:
   $ blindpay available rails
