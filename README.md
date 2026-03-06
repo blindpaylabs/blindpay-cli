@@ -54,8 +54,7 @@ Every command supports `--help` for detailed usage and `--json` for machine-read
 
 | Command | Description |
 |---|---|
-| `blindpay instances get` | Get instance details |
-| `blindpay instances update` | Update instance name or webhook URL |
+| `blindpay instances update` | Update instance name or redirect URL |
 | `blindpay instances members list` | List instance members |
 
 ### Receivers
