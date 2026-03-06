@@ -710,6 +710,19 @@ export async function getInstance(options: { json: boolean }) {
   }
 }
 
+export async function listInstanceMembers(options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/members`)
+    const list = extractList(res)
+    const display = list.map((m: any) => ({ id: m.id, email: m.email, role: m.role, name: m.name || '-' }))
+    printResult(options.json ? list : display, options.json, ['id', 'email', 'role', 'name'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
 export async function updateInstance(options: {
   name?: string
   webhookUrl?: string
