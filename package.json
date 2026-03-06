@@ -7,7 +7,7 @@
   "author": "Blindpay <gabriel@blindpay.com> (https://blindpay.com/)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/blindpaylabs/blindpay-cli.git"
+    "url": "git+https://github.com/blindpaylabs/blindpay-cli.git"
   },
   "homepage": "https://github.com/blindpaylabs/blindpay-cli#readme",
   "bugs": {
@@ -24,7 +24,7 @@
     "payin"
   ],
   "bin": {
-    "blindpay": "./dist/index.js"
+    "blindpay": "dist/index.js"
   },
   "files": [
     "dist",
