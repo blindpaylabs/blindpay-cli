@@ -205,14 +205,14 @@ export async function updateReceiver(
   }
 }
 
-export async function deleteReceiver(id: string) {
+export async function deleteReceiver(id: string, options: { json?: boolean } = {}) {
   try {
     const ctx = resolveContext()
     await apiDelete(ctx, `${instancePath(ctx)}/receivers/${id}`)
     clack.log.success(`Deleted receiver ${id}`)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -279,14 +279,14 @@ export async function createBankAccount(options: {
   }
 }
 
-export async function deleteBankAccount(id: string, options: { receiverId: string }) {
+export async function deleteBankAccount(id: string, options: { receiverId: string, json?: boolean }) {
   try {
     const ctx = resolveContext()
     await apiDelete(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts/${id}`)
     clack.log.success(`Deleted bank account ${id}`)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -341,14 +341,14 @@ export async function createBlockchainWallet(options: {
   }
 }
 
-export async function deleteBlockchainWallet(id: string, options: { receiverId: string }) {
+export async function deleteBlockchainWallet(id: string, options: { receiverId: string, json?: boolean }) {
   try {
     const ctx = resolveContext()
     await apiDelete(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets/${id}`)
     clack.log.success(`Deleted blockchain wallet ${id}`)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -536,14 +536,14 @@ export async function createWebhookEndpoint(options: { url: string, description?
   }
 }
 
-export async function deleteWebhookEndpoint(id: string) {
+export async function deleteWebhookEndpoint(id: string, options: { json?: boolean } = {}) {
   try {
     const ctx = resolveContext()
     await apiDelete(ctx, `${instancePath(ctx)}/webhook-endpoints/${id}`)
     clack.log.success(`Deleted webhook endpoint ${id}`)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -582,7 +582,7 @@ export async function createPartnerFee(options: {
     const parseFee = (val: string | undefined, label: string): number => {
       if (val === undefined) return 0
       const n = Number(val)
-      if (!Number.isFinite(n)) exitWithError(`Invalid ${label}: "${val}". Must be a number.`, 1, options.json)
+      if (!Number.isFinite(n) || n < 0) exitWithError(`Invalid ${label}: "${val}". Must be a non-negative number.`, 1, options.json)
       return n * 100
     }
     const body: Record<string, any> = {
@@ -604,14 +604,14 @@ export async function createPartnerFee(options: {
   }
 }
 
-export async function deletePartnerFee(id: string) {
+export async function deletePartnerFee(id: string, options: { json?: boolean } = {}) {
   try {
     const ctx = resolveContext()
     await apiDelete(ctx, `${instancePath(ctx)}/partner-fees/${id}`)
     clack.log.success(`Deleted partner fee ${id}`)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -621,7 +621,8 @@ export async function listApiKeys(options: { json: boolean }) {
     const ctx = resolveContext()
     const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/api-keys`)
     const list = extractList(res)
-    const display = list.map((k: any) => ({ id: k.id, name: k.name, key: `${(k.key || '').slice(0, 16)}...`, permission: k.permission }))
+    const maskKey = (s: string | null) => (!s ? '-' : s.length > 8 ? `${s.slice(0, 4)}...${s.slice(-4)}` : '***')
+    const display = list.map((k: any) => ({ id: k.id, name: k.name, key: maskKey(k.key), permission: k.permission }))
     printResult(options.json ? list : display, options.json, ['id', 'name', 'key', 'permission'])
   }
   catch (e) {
@@ -646,14 +647,14 @@ export async function createApiKey(options: { name?: string, permission?: string
   }
 }
 
-export async function deleteApiKey(id: string) {
+export async function deleteApiKey(id: string, options: { json?: boolean } = {}) {
   try {
     const ctx = resolveContext()
     await apiDelete(ctx, `${instancePath(ctx)}/api-keys/${id}`)
     clack.log.success(`Deleted API key ${id}`)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
