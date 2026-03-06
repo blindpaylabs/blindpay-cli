@@ -1,0 +1,50 @@
+{
+  "name": "@blindpay/cli",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Blindpay CLI - Local mock server and developer tools for Blindpay API",
+  "license": "MIT",
+  "keywords": [
+    "blindpay",
+    "cli",
+    "mock",
+    "api",
+    "payments",
+    "crypto",
+    "stablecoin"
+  ],
+  "bin": {
+    "blindpay": "./dist/index.js"
+  },
+  "files": [
+    "README.md",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node --minify && tail -n +2 dist/index.js > dist/tmp.js && echo '#!/usr/bin/env node' | cat - dist/tmp.js > dist/index.js && rm dist/tmp.js && chmod +x dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint -c oxlint.json src/",
+    "lint:fix": "oxlint -c oxlint.json --fix src/",
+    "test": "bun test",
+    "test-server": "bun run test-server.ts"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.0.1",
+    "@commander-js/extra-typings": "^14.0.0",
+    "@hono/node-server": "^1.13.0",
+    "commander": "^14.0.0",
+    "hono": "^4.6.4",
+    "nanoid": "^5.1.2",
+    "picocolors": "^1.1.0",
+    "unicode-animations": "latest"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "oxlint": "^1.48.0",
+    "typescript": "^5.5.0"
+  }
+}
