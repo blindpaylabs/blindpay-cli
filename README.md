@@ -97,6 +97,13 @@ blindpay update
 npm install -g @blindpay/cli@latest
 ```
 
+## Support
+
+- Email: [alves@blindpay.com](mailto:alves@blindpay.com)
+- Issues: [GitHub Issues](https://github.com/blindpaylabs/blindpay-cli/issues)
+
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Made with ❤️ by the [BlindPay](https://blindpay.com) team
