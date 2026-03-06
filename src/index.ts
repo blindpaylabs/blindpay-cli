@@ -177,7 +177,8 @@ receivers
 receivers
   .command('delete <id>')
   .description('Delete a receiver')
-  .action(id => deleteReceiver(id))
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => deleteReceiver(id, opts))
 
 receivers
   .command('limits <id>')
@@ -236,6 +237,7 @@ bankAccounts
   .command('delete <id>')
   .description('Delete a bank account')
   .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .option('--json', 'Output as JSON', false)
   .action((id, opts) => deleteBankAccount(id, opts))
 
 // ── Blockchain Wallets ──────────────────────────────────────────────────
@@ -276,6 +278,7 @@ blockchainWallets
   .command('delete <id>')
   .description('Delete a blockchain wallet')
   .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .option('--json', 'Output as JSON', false)
   .action((id, opts) => deleteBlockchainWallet(id, opts))
 
 // ── Quotes ──────────────────────────────────────────────────────────────
@@ -411,7 +414,8 @@ webhookEndpoints
 webhookEndpoints
   .command('delete <id>')
   .description('Delete a webhook endpoint')
-  .action(id => deleteWebhookEndpoint(id))
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => deleteWebhookEndpoint(id, opts))
 
 // ── Partner Fees ────────────────────────────────────────────────────────
 const partnerFees = program.command('partner_fees').description('Manage partner fees')
@@ -443,7 +447,8 @@ partnerFees
 partnerFees
   .command('delete <id>')
   .description('Delete a partner fee')
-  .action(id => deletePartnerFee(id))
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => deletePartnerFee(id, opts))
 
 // ── API Keys ────────────────────────────────────────────────────────────
 const apiKeys = program.command('api_keys').description('Manage API keys')
@@ -470,7 +475,8 @@ apiKeys
 apiKeys
   .command('delete <id>')
   .description('Delete an API key')
-  .action(id => deleteApiKey(id))
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => deleteApiKey(id, opts))
 
 // ── Virtual Accounts ────────────────────────────────────────────────────
 const virtualAccounts = program.command('virtual_accounts').description('Manage virtual accounts')
