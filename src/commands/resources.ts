@@ -319,6 +319,7 @@ export async function createBlockchainWallet(options: {
   receiverId: string
   address: string
   network?: string
+  name?: string
   externalId?: string
   json: boolean
 }) {
@@ -327,6 +328,7 @@ export async function createBlockchainWallet(options: {
     const body = {
       address: options.address,
       network: options.network || 'base',
+      name: options.name || 'CLI Blockchain Wallet',
       external_id: options.externalId ?? null,
     }
     const wallet = await apiPost<{ id: string, network: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets`, body)
@@ -566,6 +568,7 @@ export async function listPartnerFees(options: { json: boolean }) {
 }
 
 export async function createPartnerFee(options: {
+  name?: string
   payinPercentage?: string
   payinFlat?: string
   payoutPercentage?: string
@@ -582,7 +585,8 @@ export async function createPartnerFee(options: {
       if (!Number.isFinite(n)) exitWithError(`Invalid ${label}: "${val}". Must be a number.`, 1, options.json)
       return n * 100
     }
-    const body = {
+    const body: Record<string, any> = {
+      name: options.name || 'CLI Partner Fee',
       payin_percentage_fee: parseFee(options.payinPercentage, 'payin percentage'),
       payin_flat_fee: parseFee(options.payinFlat, 'payin flat fee'),
       payout_percentage_fee: parseFee(options.payoutPercentage, 'payout percentage'),
