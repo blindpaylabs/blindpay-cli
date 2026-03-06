@@ -57,12 +57,15 @@ Every command supports `--help` for detailed usage and `--json` for machine-read
 
 ```
 blindpay config set|get|clear|path       Configure API credentials
+blindpay instances get|update            Instance settings
 blindpay receivers list|get|create|update|delete
+blindpay receivers limits <id>           Get receiver limits
+blindpay receivers limits_increase_requests <id>
 blindpay bank_accounts list|get|create|delete    (--receiver-id required)
 blindpay blockchain_wallets list|get|create|delete (--receiver-id required)
-blindpay quotes create                   Create a payout quote
+blindpay quotes create|fx                Create a payout quote / get FX rates
 blindpay payouts list|get|create         Execute stablecoin-to-fiat payouts
-blindpay payin_quotes create             Create a payin quote
+blindpay payin_quotes create|fx          Create a payin quote / get FX rates
 blindpay payins list|get|create          Execute fiat-to-stablecoin payins
 blindpay webhook_endpoints list|create|delete
 blindpay partner_fees list|create|delete

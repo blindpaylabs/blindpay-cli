@@ -8,6 +8,8 @@ import {
   createReceiver,
   updateReceiver,
   deleteReceiver,
+  getReceiverLimits,
+  getReceiverLimitsIncreaseRequests,
   listBankAccounts,
   getBankAccount,
   createBankAccount,
@@ -24,6 +26,7 @@ import {
   createPayin,
   createPayinQuote,
   createQuote,
+  getQuoteFxRate,
   listWebhookEndpoints,
   createWebhookEndpoint,
   deleteWebhookEndpoint,
@@ -36,6 +39,8 @@ import {
   listVirtualAccounts,
   createVirtualAccount,
   listOfframpWallets,
+  getInstance,
+  updateInstance,
   listAvailableRails,
   getAvailableBankDetails,
 } from './commands/resources'
@@ -173,6 +178,18 @@ receivers
   .description('Delete a receiver')
   .action(id => deleteReceiver(id))
 
+receivers
+  .command('limits <id>')
+  .description('Get receiver limits')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => getReceiverLimits(id, opts))
+
+receivers
+  .command('limits_increase_requests <id>')
+  .description('Get receiver limits increase requests')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => getReceiverLimitsIncreaseRequests(id, opts))
+
 // ── Bank Accounts ───────────────────────────────────────────────────────
 const bankAccounts = program.command('bank_accounts').description('Manage bank accounts')
   .addHelpText('after', `
@@ -275,6 +292,14 @@ quotes
   .option('--json', 'Output as JSON', false)
   .action(opts => createQuote(opts))
 
+quotes
+  .command('fx')
+  .description('Get FX rates')
+  .option('--from <currency>', 'Source currency')
+  .option('--to <currency>', 'Target currency')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => getQuoteFxRate(opts))
+
 // ── Payouts ─────────────────────────────────────────────────────────────
 const payouts = program.command('payouts').description('Manage payouts')
   .addHelpText('after', `
@@ -321,6 +346,14 @@ payinQuotes
   .option('--currency <currency>', 'Currency', 'USD')
   .option('--json', 'Output as JSON', false)
   .action(opts => createPayinQuote(opts))
+
+payinQuotes
+  .command('fx')
+  .description('Get FX rates')
+  .option('--from <currency>', 'Source currency')
+  .option('--to <currency>', 'Target currency')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => getQuoteFxRate(opts))
 
 // ── Payins ──────────────────────────────────────────────────────────────
 const payins = program.command('payins').description('Manage payins')
@@ -427,6 +460,7 @@ apiKeys
   .command('create')
   .description('Create an API key')
   .option('--name <name>', 'Key name', 'CLI API Key')
+  .option('--permission <permission>', 'Permission level')
   .option('--json', 'Output as JSON', false)
   .action(opts => createApiKey(opts))
 
@@ -470,6 +504,27 @@ offrampWallets
   .requiredOption('--bank-account-id <id>', 'Bank account ID')
   .option('--json', 'Output as JSON', false)
   .action(opts => listOfframpWallets(opts))
+
+// ── Instances ──────────────────────────────────────────────────────────
+const instances = program.command('instances').description('Manage your instance')
+  .addHelpText('after', `
+Examples:
+  $ blindpay instances get
+  $ blindpay instances update --name "My Instance" --webhook-url https://example.com/webhook`)
+
+instances
+  .command('get')
+  .description('Get instance details')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => getInstance(opts))
+
+instances
+  .command('update')
+  .description('Update instance settings')
+  .option('--name <name>', 'Instance name')
+  .option('--webhook-url <url>', 'Default webhook URL')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => updateInstance(opts))
 
 // ── Available ───────────────────────────────────────────────────────────
 const available = program.command('available').description('Reference data (no API key required)')

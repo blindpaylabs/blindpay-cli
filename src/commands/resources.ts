@@ -626,10 +626,12 @@ export async function listApiKeys(options: { json: boolean }) {
   }
 }
 
-export async function createApiKey(options: { name?: string, json: boolean }) {
+export async function createApiKey(options: { name?: string, permission?: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const key = await apiPost<{ id: string, key: string }>(ctx, `${instancePath(ctx)}/api-keys`, { name: options.name || 'CLI API Key' })
+    const body: Record<string, string> = { name: options.name || 'CLI API Key' }
+    if (options.permission) body.permission = options.permission
+    const key = await apiPost<{ id: string, key: string }>(ctx, `${instancePath(ctx)}/api-keys`, body)
     clack.log.success(`Created API key ${key.id}`)
     clack.log.warning(`Secret: ${key.key}`)
     clack.log.message('Save this key now — it will not be shown again.')
@@ -687,6 +689,80 @@ export async function listOfframpWallets(options: { receiverId: string, bankAcco
     const list = extractList(res)
     const display = list.map((w: any) => ({ id: w.id, address: truncate(w.address, 20), network: w.network }))
     printResult(options.json ? list : display, options.json, ['id', 'address', 'network'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Instances
+export async function getInstance(options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const instance = await apiGet(ctx, `${instancePath(ctx)}`)
+    printResult(instance, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function updateInstance(options: {
+  name?: string
+  webhookUrl?: string
+  json: boolean
+}) {
+  try {
+    const ctx = resolveContext()
+    const body: Record<string, any> = {}
+    if (options.name !== undefined) body.name = options.name
+    if (options.webhookUrl !== undefined) body.webhook_url = options.webhookUrl
+    if (Object.keys(body).length === 0) {
+      exitWithError('Provide at least one field to update (e.g. --name, --webhook-url)', 1, options.json)
+    }
+    const instance = await apiPut<Record<string, any>>(ctx, `${instancePath(ctx)}`, body)
+    clack.log.success('Instance updated')
+    printResult(instance, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Receiver Limits
+export async function getReceiverLimits(receiverId: string, options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const limits = await apiGet(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limits`)
+    printResult(limits, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function getReceiverLimitsIncreaseRequests(receiverId: string, options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limits-increase-requests`)
+    const list = extractList(res)
+    printResult(list, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// FX Rates
+export async function getQuoteFxRate(options: { from?: string, to?: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const params = new URLSearchParams()
+    if (options.from) params.set('from', options.from)
+    if (options.to) params.set('to', options.to)
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    const rate = await apiGet(ctx, `${instancePath(ctx)}/fx-rates${qs}`)
+    printResult(rate, options.json)
   }
   catch (e) {
     handleApiError(e, options.json)
