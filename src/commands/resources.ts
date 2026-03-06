@@ -4,7 +4,7 @@ import pc from 'picocolors'
 import { formatOutput, truncate } from '../utils/output'
 import type { ApiContext, ApiError, ValidationErrorItem } from '../utils/api-client'
 import { apiGet, apiPost, apiPut, apiDelete, resolveContext } from '../utils/api-client'
-import { availableRails } from '../utils/constants'
+import { availableRails, bankDetailFields } from '../utils/constants'
 
 function instancePath(ctx: ApiContext) {
   return `/v1/instances/${ctx.instanceId}`
@@ -49,6 +49,15 @@ function exitWithError(message: string, exitCode: number, json = false): never {
     clack.log.error(message)
   }
   process.exit(exitCode)
+}
+
+function parseAmount(value: string | undefined, fallback: number, json: boolean): number {
+  if (value === undefined) return fallback
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    exitWithError(`Invalid amount: "${value}". Must be a non-negative number (in cents).`, 1, json)
+  }
+  return Math.round(parsed)
 }
 
 function extractList(res: any): any[] {
@@ -116,6 +125,7 @@ export async function createReceiver(options: {
       }
       else {
         first_name = parts[0]
+        last_name = null
       }
     }
     const body = {
@@ -450,11 +460,10 @@ export async function createPayin(options: { payinQuoteId: string, network?: str
 export async function createPayinQuote(options: { blockchainWalletId: string, paymentMethod: string, amount?: string, currency?: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const parsed = Number.parseInt(options.amount ?? '1000')
     const body = {
       blockchain_wallet_id: options.blockchainWalletId,
       payment_method: options.paymentMethod,
-      request_amount: Number.isNaN(parsed) ? 1000 : parsed,
+      request_amount: parseAmount(options.amount, 1000, options.json),
       currency: options.currency ?? 'USD',
     }
     const quote = await apiPost<{ id: string, sender_amount: number, receiver_amount: number, payment_method: string, currency: string }>(ctx, `${instancePath(ctx)}/payin-quotes`, body)
@@ -479,12 +488,11 @@ export async function createQuote(options: {
 }) {
   try {
     const ctx = resolveContext()
-    const parsed = Number.parseInt(options.amount ?? '1000')
     const body = {
       bank_account_id: options.bankAccountId,
       network: options.network || 'base',
       token: options.token || 'USDC',
-      request_amount: Number.isNaN(parsed) ? 1000 : parsed,
+      request_amount: parseAmount(options.amount, 1000, options.json),
     }
     const quote = await apiPost<{ id: string, sender_amount: number, receiver_amount: number, token?: string, currency?: string }>(ctx, `${instancePath(ctx)}/quotes`, body)
     const token = quote.token ?? 'USDC'
@@ -569,11 +577,17 @@ export async function createPartnerFee(options: {
 }) {
   try {
     const ctx = resolveContext()
+    const parseFee = (val: string | undefined, label: string): number => {
+      if (val === undefined) return 0
+      const n = Number(val)
+      if (!Number.isFinite(n)) exitWithError(`Invalid ${label}: "${val}". Must be a number.`, 1, options.json)
+      return n * 100
+    }
     const body = {
-      payin_percentage_fee: Number.parseFloat(options.payinPercentage ?? '0') * 100,
-      payin_flat_fee: Number.parseFloat(options.payinFlat ?? '0') * 100,
-      payout_percentage_fee: Number.parseFloat(options.payoutPercentage ?? '0') * 100,
-      payout_flat_fee: Number.parseFloat(options.payoutFlat ?? '0') * 100,
+      payin_percentage_fee: parseFee(options.payinPercentage, 'payin percentage'),
+      payin_flat_fee: parseFee(options.payinFlat, 'payin flat fee'),
+      payout_percentage_fee: parseFee(options.payoutPercentage, 'payout percentage'),
+      payout_flat_fee: parseFee(options.payoutFlat, 'payout flat fee'),
       evm_wallet_address: options.evmWallet ?? null,
       stellar_wallet_address: options.stellarWallet ?? null,
     }
@@ -616,7 +630,9 @@ export async function createApiKey(options: { name?: string, json: boolean }) {
   try {
     const ctx = resolveContext()
     const key = await apiPost<{ id: string, key: string }>(ctx, `${instancePath(ctx)}/api-keys`, { name: options.name || 'CLI API Key' })
-    clack.log.success(`Created API key ${key.id}: ${key.key}`)
+    clack.log.success(`Created API key ${key.id}`)
+    clack.log.warning(`Secret: ${key.key}`)
+    clack.log.message('Save this key now — it will not be shown again.')
     if (options.json)
       console.log(formatOutput(key, true))
   }
@@ -683,20 +699,9 @@ export function listAvailableRails(options: { json: boolean }) {
 }
 
 export function getAvailableBankDetails(options: { rail: string, json: boolean }) {
-  const fields: Record<string, string[]> = {
-    ach: ['beneficiary_name', 'routing_number', 'account_number', 'account_type', 'account_class'],
-    wire: ['beneficiary_name', 'routing_number', 'account_number', 'address_line_1', 'city', 'state_province_region', 'country', 'postal_code'],
-    rtp: ['beneficiary_name', 'routing_number', 'account_number', 'account_type', 'account_class'],
-    pix: ['pix_key'],
-    pix_safe: ['beneficiary_name', 'account_number', 'account_type', 'pix_safe_bank_code', 'pix_safe_branch_code', 'pix_safe_cpf_cnpj'],
-    spei_bitso: ['beneficiary_name', 'spei_protocol', 'spei_clabe'],
-    transfers_bitso: ['beneficiary_name', 'transfers_type', 'transfers_account'],
-    ach_cop_bitso: ['ach_cop_beneficiary_first_name', 'ach_cop_beneficiary_last_name', 'ach_cop_document_id', 'ach_cop_document_type', 'ach_cop_email', 'ach_cop_bank_code', 'ach_cop_bank_account', 'account_type'],
-    international_swift: ['swift_code_bic', 'swift_account_holder_name', 'swift_account_number_iban', 'swift_beneficiary_address_line_1', 'swift_beneficiary_country', 'swift_beneficiary_city', 'swift_beneficiary_state_province_region', 'swift_beneficiary_postal_code', 'swift_bank_name', 'swift_bank_address_line_1', 'swift_bank_country', 'swift_bank_city', 'swift_bank_state_province_region', 'swift_bank_postal_code'],
-  }
-  const result = fields[options.rail]
+  const result = bankDetailFields[options.rail]
   if (!result) {
-    const available = Object.keys(fields).join(', ')
+    const available = Object.keys(bankDetailFields).join(', ')
     exitWithError(`Unknown rail "${options.rail}". Available rails: ${available}`, 1, options.json)
   }
   if (options.json) {
