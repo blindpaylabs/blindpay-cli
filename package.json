@@ -1,0 +1,59 @@
+{
+  "name": "@blindpay/cli",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Blindpay CLI - manage receivers, bank accounts, payouts, payins, and more from the terminal",
+  "license": "MIT",
+  "author": "Blindpay <gabriel@blindpay.com> (https://blindpay.com/)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/blindpaylabs/blindpay-cli.git"
+  },
+  "homepage": "https://github.com/blindpaylabs/blindpay-cli#readme",
+  "bugs": {
+    "url": "https://github.com/blindpaylabs/blindpay-cli/issues"
+  },
+  "keywords": [
+    "blindpay",
+    "cli",
+    "api",
+    "payments",
+    "crypto",
+    "stablecoin",
+    "payout",
+    "payin"
+  ],
+  "bin": {
+    "blindpay": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target node --minify && node -e \"const fs=require('fs');const f='dist/index.js';const c=fs.readFileSync(f,'utf8');fs.writeFileSync(f,'#!/usr/bin/env node\\n'+c);fs.chmodSync(f,0o755)\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint -c oxlint.json src/",
+    "lint:fix": "oxlint -c oxlint.json --fix src/",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.0.1",
+    "commander": "^14.0.0",
+    "picocolors": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "oxlint": "^1.48.0",
+    "typescript": "^5.5.0"
+  }
+}
