@@ -266,6 +266,7 @@ blockchainWallets
   .requiredOption('--receiver-id <id>', 'Receiver ID')
   .requiredOption('--address <address>', 'Wallet address')
   .option('--network <network>', 'Blockchain network', 'base')
+  .option('--name <name>', 'Wallet name')
   .option('--external-id <id>', 'External ID')
   .option('--json', 'Output as JSON', false)
   .action(opts => createBlockchainWallet(opts))
@@ -428,6 +429,7 @@ partnerFees
 partnerFees
   .command('create')
   .description('Create a partner fee')
+  .option('--name <name>', 'Partner fee name')
   .option('--payout-percentage <pct>', 'Payout percentage fee')
   .option('--payout-flat <amount>', 'Payout flat fee')
   .option('--payin-percentage <pct>', 'Payin percentage fee')
