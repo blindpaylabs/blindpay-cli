@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/tc39-proposal-json-schema/refs/heads/main/packages/schema/oxlint-config-schema.json",
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-console": "off",
+    "eqeqeq": "error",
+    "no-var": "error",
+    "prefer-const": "warn",
+    "no-debugger": "error",
+    "no-empty": "warn",
+    "no-extra-boolean-cast": "warn",
+    "no-unsafe-negation": "error",
+    "no-constant-condition": "warn",
+    "no-dupe-keys": "error",
+    "no-duplicate-case": "error",
+    "no-empty-pattern": "warn",
+    "no-self-assign": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "warn",
+    "no-unreachable": "error",
+    "no-loss-of-precision": "error"
+  },
+  "ignorePatterns": ["dist/**", "node_modules/**", "*.test.ts"]
+}
