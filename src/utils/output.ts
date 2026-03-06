@@ -56,8 +56,9 @@ export function formatOutput(data: any, json: boolean, columns?: string[]): stri
   return formatJson(data)
 }
 
-export function truncate(str: string, max: number = 32): string {
-  if (str.length <= max)
-    return str
+export function truncate(str: string | null | undefined, max: number = 32): string {
+  if (!str) return '-'
+  if (str.length <= max) return str
+  if (max <= 3) return '...'
   return `${str.slice(0, max - 3)}...`
 }

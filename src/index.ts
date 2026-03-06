@@ -94,7 +94,7 @@ configCmd
   .description('Show current config (API key masked)')
   .action(() => {
     const c = getConfig()
-    const mask = (s: string | null) => (s ? `${s.slice(0, 3)}...${s.slice(-4)}` : '-')
+    const mask = (s: string | null) => (!s ? '-' : s.length < 10 ? '***' : `${s.slice(0, 3)}...${s.slice(-4)}`)
     console.log(`  instance_id: ${c.instance_id ?? '-'}`)
     console.log(`  api_key:     ${mask(c.api_key)}`)
     console.log(`  base_url:    ${c.base_url ?? 'https://api.blindpay.com (default)'}`)
