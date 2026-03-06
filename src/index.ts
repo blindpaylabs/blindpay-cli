@@ -1,6 +1,7 @@
 import process from 'node:process'
 import { Command } from 'commander'
 import * as clack from '@clack/prompts'
+import { listSchemas, getSchema } from './commands/schema'
 import {
   listReceivers,
   getReceiver,
@@ -491,6 +492,27 @@ available
   .requiredOption('--rail <rail>', 'Rail type (ach, wire, pix, pix_safe, spei_bitso, transfers_bitso, ach_cop_bitso, international_swift)')
   .option('--json', 'Output as JSON', false)
   .action(opts => getAvailableBankDetails(opts))
+
+// ── Schema ─────────────────────────────────────────────────────────────
+const schema = program.command('schema').description('Introspect CLI resource schemas (JSON output for LLM/automation use)')
+  .addHelpText('after', `
+Examples:
+  $ blindpay schema                              # list all resources
+  $ blindpay schema receivers                    # full schema for receivers
+  $ blindpay schema bank_accounts                # schema + available rails
+  $ blindpay schema bank_accounts --rail ach     # schema + rail-specific fields`)
+
+schema
+  .argument('[resource]', 'Resource name (e.g. receivers, payouts, bank_accounts)')
+  .option('--rail <rail>', 'Show rail-specific fields (bank_accounts only)')
+  .action((resource, opts) => {
+    if (!resource) {
+      listSchemas()
+    }
+    else {
+      getSchema(resource, opts.rail)
+    }
+  })
 
 // ── Update ──────────────────────────────────────────────────────────────
 program

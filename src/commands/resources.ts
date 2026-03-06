@@ -19,15 +19,36 @@ function formatValidationError(item: ValidationErrorItem): string {
   return path ? `${path}: ${item.message}` : item.message
 }
 
-function handleApiError(err: unknown): never {
-  const msg = err instanceof Error ? err.message : String(err)
-  clack.log.error(msg)
+function handleApiError(err: unknown, json = false): never {
   const apiErr = err as ApiError
-  if (apiErr.validationErrors && apiErr.validationErrors.length > 0) {
-    for (const ve of apiErr.validationErrors)
-      console.log(pc.dim(`  • ${formatValidationError(ve)}`))
+  const statusCode = apiErr.statusCode
+  const exitCode = statusCode ? 2 : 1
+  const msg = err instanceof Error ? err.message : String(err)
+
+  if (json) {
+    const output: Record<string, unknown> = { error: true, message: msg, exitCode }
+    if (statusCode) output.statusCode = statusCode
+    if (apiErr.validationErrors?.length) output.validationErrors = apiErr.validationErrors
+    console.log(JSON.stringify(output, null, 2))
   }
-  process.exit(1)
+  else {
+    clack.log.error(msg)
+    if (apiErr.validationErrors?.length) {
+      for (const ve of apiErr.validationErrors)
+        console.log(pc.dim(`  • ${formatValidationError(ve)}`))
+    }
+  }
+  process.exit(exitCode)
+}
+
+function exitWithError(message: string, exitCode: number, json = false): never {
+  if (json) {
+    console.log(JSON.stringify({ error: true, message, exitCode }, null, 2))
+  }
+  else {
+    clack.log.error(message)
+  }
+  process.exit(exitCode)
 }
 
 function extractList(res: any): any[] {
@@ -55,7 +76,7 @@ export async function listReceivers(options: { json: boolean }) {
     printResult(options.json ? list : display, options.json, ['id', 'type', 'name', 'email', 'country', 'kyc_status'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -66,7 +87,7 @@ export async function getReceiver(id: string, options: { json: boolean }) {
     printResult(receiver, options.json)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -117,7 +138,7 @@ export async function createReceiver(options: {
       console.log(formatOutput(receiver, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -161,8 +182,7 @@ export async function updateReceiver(
       }
     }
     if (Object.keys(body).length === 0) {
-      clack.log.error('Provide at least one field to update (e.g. --name, --kyc-status)')
-      process.exit(1)
+      exitWithError('Provide at least one field to update (e.g. --name, --kyc-status)', 1, options.json)
     }
     const receiver = await apiPut<Record<string, any>>(ctx, `${instancePath(ctx)}/receivers/${id}`, body)
     clack.log.success(`Updated receiver ${id}`)
@@ -172,7 +192,7 @@ export async function updateReceiver(
       console.log(formatOutput(receiver, false))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -197,7 +217,7 @@ export async function listBankAccounts(options: { receiverId: string, json: bool
     printResult(options.json ? list : display, options.json, ['id', 'type', 'name', 'status', 'country'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -208,7 +228,7 @@ export async function getBankAccount(id: string, options: { receiverId: string, 
     printResult(account, options.json)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -246,7 +266,7 @@ export async function createBankAccount(options: {
       console.log(formatOutput(ba, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -271,7 +291,7 @@ export async function listBlockchainWallets(options: { receiverId: string, json:
     printResult(options.json ? list : display, options.json, ['id', 'address', 'network'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -282,7 +302,7 @@ export async function getBlockchainWallet(id: string, options: { receiverId: str
     printResult(wallet, options.json)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -306,7 +326,7 @@ export async function createBlockchainWallet(options: {
       console.log(formatOutput(wallet, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -338,7 +358,7 @@ export async function listPayouts(options: { json: boolean, status?: string }) {
     printResult(options.json ? list : display, options.json, ['id', 'status', 'amount', 'network', 'created_at'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -349,7 +369,7 @@ export async function getPayout(id: string, options: { json: boolean }) {
     printResult(payout, options.json)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -358,8 +378,7 @@ export async function createPayout(options: { quoteId: string, network?: string,
     const ctx = resolveContext()
     const network = (options.network ?? 'evm').toLowerCase()
     if (!['evm', 'solana', 'stellar'].includes(network)) {
-      clack.log.error(`Invalid network: ${options.network}. Use evm, solana, or stellar.`)
-      process.exit(1)
+      exitWithError(`Invalid network: ${options.network}. Use evm, solana, or stellar.`, 1, options.json)
     }
     const body = {
       quote_id: options.quoteId,
@@ -371,7 +390,7 @@ export async function createPayout(options: { quoteId: string, network?: string,
       console.log(formatOutput(payout, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -391,7 +410,7 @@ export async function listPayins(options: { json: boolean }) {
     printResult(options.json ? list : display, options.json, ['id', 'status', 'amount', 'method', 'created_at'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -402,7 +421,7 @@ export async function getPayin(id: string, options: { json: boolean }) {
     printResult(payin, options.json)
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -411,8 +430,7 @@ export async function createPayin(options: { payinQuoteId: string, network?: str
     const ctx = resolveContext()
     const network = (options.network ?? 'evm').toLowerCase()
     if (!['evm', 'solana', 'stellar'].includes(network)) {
-      clack.log.error(`Invalid network: ${options.network}. Use evm, solana, or stellar.`)
-      process.exit(1)
+      exitWithError(`Invalid network: ${options.network}. Use evm, solana, or stellar.`, 1, options.json)
     }
     const body = {
       payin_quote_id: options.payinQuoteId,
@@ -424,7 +442,7 @@ export async function createPayin(options: { payinQuoteId: string, network?: str
       console.log(formatOutput(payin, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -447,7 +465,7 @@ export async function createPayinQuote(options: { blockchainWalletId: string, pa
       console.log(formatOutput(quote, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -478,7 +496,7 @@ export async function createQuote(options: {
       console.log(formatOutput(quote, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -492,7 +510,7 @@ export async function listWebhookEndpoints(options: { json: boolean }) {
     printResult(options.json ? list : display, options.json, ['id', 'url', 'description'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -505,7 +523,7 @@ export async function createWebhookEndpoint(options: { url: string, description?
       console.log(formatOutput(endpoint, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -536,7 +554,7 @@ export async function listPartnerFees(options: { json: boolean }) {
     printResult(options.json ? list : display, options.json, ['id', 'payout_pct', 'payout_flat', 'payin_pct', 'payin_flat'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -565,7 +583,7 @@ export async function createPartnerFee(options: {
       console.log(formatOutput(fee, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -590,7 +608,7 @@ export async function listApiKeys(options: { json: boolean }) {
     printResult(options.json ? list : display, options.json, ['id', 'name', 'key', 'permission'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -603,7 +621,7 @@ export async function createApiKey(options: { name?: string, json: boolean }) {
       console.log(formatOutput(key, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -628,7 +646,7 @@ export async function listVirtualAccounts(options: { receiverId: string, json: b
     printResult(options.json ? list : display, options.json, ['id', 'account_number', 'routing_number', 'kyc_status'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -641,7 +659,7 @@ export async function createVirtualAccount(options: { receiverId: string, blockc
       console.log(formatOutput(account, true))
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -655,7 +673,7 @@ export async function listOfframpWallets(options: { receiverId: string, bankAcco
     printResult(options.json ? list : display, options.json, ['id', 'address', 'network'])
   }
   catch (e) {
-    handleApiError(e)
+    handleApiError(e, options.json)
   }
 }
 
@@ -679,8 +697,7 @@ export function getAvailableBankDetails(options: { rail: string, json: boolean }
   const result = fields[options.rail]
   if (!result) {
     const available = Object.keys(fields).join(', ')
-    clack.log.error(`Unknown rail "${options.rail}". Available rails: ${available}`)
-    process.exit(1)
+    exitWithError(`Unknown rail "${options.rail}". Available rails: ${available}`, 1, options.json)
   }
   if (options.json) {
     console.log(formatOutput({ rail: options.rail, fields: result }, true))
