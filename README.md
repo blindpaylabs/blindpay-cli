@@ -12,6 +12,10 @@ The official CLI for [BlindPay](https://blindpay.com) - Stablecoin API for globa
 npm install -g @blindpay/cli
 ```
 
+```bash
+bun add -g @blindpay/cli
+```
+
 Or run without installing:
 
 ```bash
@@ -26,57 +30,141 @@ Grab your API key and instance ID from the [BlindPay dashboard](https://app.blin
 blindpay config set --api-key sk_live_... --instance-id inst_...
 ```
 
-That's it. Alternatively, set environment variables:
+Alternatively, set environment variables:
 
 ```bash
 export BLINDPAY_API_KEY=sk_live_...
 export BLINDPAY_INSTANCE_ID=inst_...
 ```
 
-## Quick start
-
-```bash
-# Create a receiver
-blindpay receivers create --email john@example.com --name "John Doe" --country US
-
-# Add a bank account
-blindpay bank_accounts create --receiver-id re_xxx --type ach \
-  --routing-number 021000021 --account-number 123456789
-
-# Get a quote and execute a payout
-blindpay quotes create --bank-account-id ba_xxx --amount 5000 --token USDC
-blindpay payouts create --quote-id qt_xxx --sender-wallet-address 0x...
-
-# Check status
-blindpay payouts get po_xxx
-```
-
 ## Commands
 
 Every command supports `--help` for detailed usage and `--json` for machine-readable output.
 
-```
-blindpay config set|get|clear|path       Configure API credentials
-blindpay instances get|update            Instance settings
-blindpay receivers list|get|create|update|delete
-blindpay receivers limits <id>           Get receiver limits
-blindpay receivers limits_increase_requests <id>
-blindpay bank_accounts list|get|create|delete    (--receiver-id required)
-blindpay blockchain_wallets list|get|create|delete (--receiver-id required)
-blindpay quotes create|fx                Create a payout quote / get FX rates
-blindpay payouts list|get|create         Execute stablecoin-to-fiat payouts
-blindpay payin_quotes create|fx          Create a payin quote / get FX rates
-blindpay payins list|get|create          Execute fiat-to-stablecoin payins
-blindpay webhook_endpoints list|create|delete
-blindpay partner_fees list|create|delete
-blindpay api_keys list|create|delete
-blindpay virtual_accounts list|create    (--receiver-id required)
-blindpay offramp_wallets list            (--receiver-id + --bank-account-id)
-blindpay available rails                 List supported payment rails
-blindpay available bank_details --rail ach  Required fields per rail
-blindpay schema [resource]               Introspect field schemas (for LLM/automation)
-blindpay update                          Print update instructions
-```
+### Config
+
+| Command | Description |
+|---|---|
+| `blindpay config set` | Set API key, instance ID, or base URL |
+| `blindpay config get` | Show current config (API key masked) |
+| `blindpay config clear` | Remove saved config |
+| `blindpay config path` | Print config file path |
+
+### Instances
+
+| Command | Description |
+|---|---|
+| `blindpay instances get` | Get instance details |
+| `blindpay instances update` | Update instance name or webhook URL |
+| `blindpay instances members list` | List instance members |
+
+### Receivers
+
+| Command | Description |
+|---|---|
+| `blindpay receivers list` | List all receivers |
+| `blindpay receivers get <id>` | Get a receiver by ID |
+| `blindpay receivers create` | Create a new receiver |
+| `blindpay receivers update <id>` | Update a receiver |
+| `blindpay receivers delete <id>` | Delete a receiver |
+| `blindpay receivers limits <id>` | Get receiver limits |
+| `blindpay receivers limits_increase_requests <id>` | Get limits increase requests |
+
+### Bank Accounts
+
+Requires `--receiver-id` on every command.
+
+| Command | Description |
+|---|---|
+| `blindpay bank_accounts list` | List bank accounts for a receiver |
+| `blindpay bank_accounts get <id>` | Get a bank account by ID |
+| `blindpay bank_accounts create` | Create a new bank account |
+| `blindpay bank_accounts delete <id>` | Delete a bank account |
+
+### Blockchain Wallets
+
+Requires `--receiver-id` on every command.
+
+| Command | Description |
+|---|---|
+| `blindpay blockchain_wallets list` | List blockchain wallets for a receiver |
+| `blindpay blockchain_wallets get <id>` | Get a blockchain wallet by ID |
+| `blindpay blockchain_wallets create` | Create a new blockchain wallet |
+| `blindpay blockchain_wallets delete <id>` | Delete a blockchain wallet |
+
+### Payouts
+
+| Command | Description |
+|---|---|
+| `blindpay quotes create` | Create a payout quote |
+| `blindpay quotes fx` | Get FX rates |
+| `blindpay payouts list` | List all payouts |
+| `blindpay payouts get <id>` | Get a payout by ID |
+| `blindpay payouts create` | Execute a payout from a quote |
+
+### Payins
+
+| Command | Description |
+|---|---|
+| `blindpay payin_quotes create` | Create a payin quote |
+| `blindpay payin_quotes fx` | Get FX rates |
+| `blindpay payins list` | List all payins |
+| `blindpay payins get <id>` | Get a payin by ID |
+| `blindpay payins create` | Execute a payin from a quote |
+
+### Virtual Accounts
+
+Requires `--receiver-id` on every command.
+
+| Command | Description |
+|---|---|
+| `blindpay virtual_accounts list` | List virtual accounts for a receiver |
+| `blindpay virtual_accounts create` | Create a virtual account |
+
+### Offramp Wallets
+
+| Command | Description |
+|---|---|
+| `blindpay offramp_wallets list` | List offramp wallets (`--receiver-id` + `--bank-account-id`) |
+
+### Webhook Endpoints
+
+| Command | Description |
+|---|---|
+| `blindpay webhook_endpoints list` | List webhook endpoints |
+| `blindpay webhook_endpoints create` | Create a webhook endpoint |
+| `blindpay webhook_endpoints delete <id>` | Delete a webhook endpoint |
+
+### Partner Fees
+
+| Command | Description |
+|---|---|
+| `blindpay partner_fees list` | List partner fees |
+| `blindpay partner_fees create` | Create a partner fee |
+| `blindpay partner_fees delete <id>` | Delete a partner fee |
+
+### API Keys
+
+| Command | Description |
+|---|---|
+| `blindpay api_keys list` | List API keys |
+| `blindpay api_keys create` | Create an API key |
+| `blindpay api_keys delete <id>` | Delete an API key |
+
+### Reference Data
+
+| Command | Description |
+|---|---|
+| `blindpay available rails` | List supported payment rails |
+| `blindpay available bank_details --rail <rail>` | Required fields per rail |
+
+### Tooling
+
+| Command | Description |
+|---|---|
+| `blindpay schema` | List all resources and their commands |
+| `blindpay schema <resource>` | Field definitions for a resource (JSON) |
+| `blindpay update` | Print update instructions |
 
 ## LLM / automation support
 

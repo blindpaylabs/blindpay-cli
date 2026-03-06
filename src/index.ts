@@ -40,6 +40,7 @@ import {
   createVirtualAccount,
   listOfframpWallets,
   getInstance,
+  listInstanceMembers,
   updateInstance,
   listAvailableRails,
   getAvailableBankDetails,
@@ -512,7 +513,8 @@ const instances = program.command('instances').description('Manage your instance
   .addHelpText('after', `
 Examples:
   $ blindpay instances get
-  $ blindpay instances update --name "My Instance" --webhook-url https://example.com/webhook`)
+  $ blindpay instances update --name "My Instance"
+  $ blindpay instances members list`)
 
 instances
   .command('get')
@@ -527,6 +529,14 @@ instances
   .option('--webhook-url <url>', 'Default webhook URL')
   .option('--json', 'Output as JSON', false)
   .action(opts => updateInstance(opts))
+
+const instanceMembers = instances.command('members').description('Manage instance members')
+
+instanceMembers
+  .command('list')
+  .description('List instance members')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => listInstanceMembers(opts))
 
 // ── Available ───────────────────────────────────────────────────────────
 const available = program.command('available').description('Available payment rails and bank details')
