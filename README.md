@@ -1,7 +1,7 @@
 <h1>BlindPay CLI <img src="https://github.com/user-attachments/assets/c42b121d-adf1-467c-88ce-6f5be1efa93c" align="right" width="102"/></h1>
 
 [![chat on Discord](https://img.shields.io/discord/856971667393609759.svg?logo=discord)](https://discord.gg/x7ap6Gkbe9)
-[![twitter](https://img.shields.io/twitter/follow/blindpaylabs?style=social)](https://twitter.com/intent/follow?screen_name=blindpaylabs)
+[![twitter](https://img.shields.io/twitter/follow/blindpay?style=social)](https://twitter.com/intent/follow?screen_name=blindpay)
 [![npm version](https://img.shields.io/npm/v/@blindpay/cli)](https://www.npmjs.com/package/@blindpay/cli)
 
 The official CLI for [BlindPay](https://blindpay.com) - Stablecoin API for global payments.
