@@ -3,13 +3,13 @@ import { Command } from 'commander'
 import * as clack from '@clack/prompts'
 import { listSchemas, getSchema } from './commands/schema'
 import {
-  listReceivers,
-  getReceiver,
-  createReceiver,
-  updateReceiver,
-  deleteReceiver,
-  getReceiverLimits,
-  getReceiverLimitsIncreaseRequests,
+  listCustomers,
+  getCustomer,
+  createCustomer,
+  updateCustomer,
+  deleteCustomer,
+  getCustomerLimits,
+  getCustomerLimitsIncreaseRequests,
   listBankAccounts,
   getBankAccount,
   createBankAccount,
@@ -52,12 +52,12 @@ const program = new Command()
 
 program
   .name('blindpay')
-  .description('Blindpay CLI — manage receivers, bank accounts, payouts, payins, and more from the terminal.')
+  .description('Blindpay CLI — manage customers, bank accounts, payouts, payins, and more from the terminal.')
   .version(CLI_VERSION)
   .addHelpText('after', `
 Examples:
   $ blindpay config set --api-key <key> --instance-id <id>
-  $ blindpay receivers list --json
+  $ blindpay customers list --json
   $ blindpay payouts list --status processing
   $ blindpay available rails
 
@@ -122,33 +122,33 @@ configCmd
   .action(() => console.log(getConfigPath()))
 
 // ── Receivers ───────────────────────────────────────────────────────────
-const receivers = program.command('receivers').description('Manage receivers')
+const customers = program.command('customers').description('Manage customers')
   .addHelpText('after', `
 Examples:
-  $ blindpay receivers list
-  $ blindpay receivers list --json
-  $ blindpay receivers get <id>
-  $ blindpay receivers create --email user@example.com --name "John Doe" --country US
-  $ blindpay receivers create --type business --email biz@co.com --legal-name "Acme Inc"
-  $ blindpay receivers update <id> --kyc-status approved
-  $ blindpay receivers delete <id>`)
+  $ blindpay customers list
+  $ blindpay customers list --json
+  $ blindpay customers get <id>
+  $ blindpay customers create --email user@example.com --name "John Doe" --country US
+  $ blindpay customers create --type business --email biz@co.com --legal-name "Acme Inc"
+  $ blindpay customers update <id> --kyc-status approved
+  $ blindpay customers delete <id>`)
 
-receivers
+customers
   .command('list')
-  .description('List all receivers')
+  .description('List all customers')
   .option('--json', 'Output as JSON', false)
-  .action(opts => listReceivers(opts))
+  .action(opts => listCustomers(opts))
 
-receivers
+customers
   .command('get <id>')
-  .description('Get a receiver by ID')
+  .description('Get a customer by ID')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => getReceiver(id, opts))
 
-receivers
+customers
   .command('create')
-  .description('Create a new receiver')
-  .requiredOption('--email <email>', 'Receiver email')
+  .description('Create a new customer')
+  .requiredOption('--email <email>', 'Customer email')
   .option('--type <type>', 'individual or business', 'individual')
   .option('--name <name>', 'Full name (individual); splits into first_name and last_name')
   .option('--first-name <name>', 'First name (individual)')
@@ -161,32 +161,32 @@ receivers
   .option('--json', 'Output as JSON', false)
   .action(opts => createReceiver(opts))
 
-receivers
+customers
   .command('update <id>')
-  .description('Update a receiver')
+  .description('Update a customer')
   .option('--name <name>', 'Full name (individual); splits into first_name and last_name')
   .option('--first-name <name>', 'First name (individual)')
   .option('--last-name <name>', 'Last name (individual)')
   .option('--legal-name <name>', 'Legal name (business)')
-  .option('--email <email>', 'Receiver email')
+  .option('--email <email>', 'Customer email')
   .option('--country <country>', 'ISO 3166 country code')
   .option('--kyc-status <status>', 'KYC status (verifying, approved, rejected, deprecated)')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => updateReceiver(id, opts))
 
-receivers
+customers
   .command('delete <id>')
-  .description('Delete a receiver')
+  .description('Delete a customer')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => deleteReceiver(id, opts))
 
-receivers
+customers
   .command('limits <id>')
   .description('Get receiver limits')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => getReceiverLimits(id, opts))
 
-receivers
+customers
   .command('limits_increase_requests <id>')
   .description('Get receiver limits increase requests')
   .option('--json', 'Output as JSON', false)
@@ -571,12 +571,12 @@ const schema = program.command('schema').description('Introspect CLI resource sc
   .addHelpText('after', `
 Examples:
   $ blindpay schema                              # list all resources
-  $ blindpay schema receivers                    # full schema for receivers
+  $ blindpay schema customers                    # full schema for receivers
   $ blindpay schema bank_accounts                # schema + available rails
   $ blindpay schema bank_accounts --rail ach     # schema + rail-specific fields`)
 
 schema
-  .argument('[resource]', 'Resource name (e.g. receivers, payouts, bank_accounts)')
+  .argument('[resource]', 'Resource name (e.g. customers, payouts, bank_accounts)')
   .option('--rail <rail>', 'Show rail-specific fields (bank_accounts only)')
   .action((resource, opts) => {
     if (!resource) {

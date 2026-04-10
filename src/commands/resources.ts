@@ -67,11 +67,11 @@ function extractList(res: any): any[] {
   return []
 }
 
-// Receivers
-export async function listReceivers(options: { json: boolean }) {
+// Customers
+export async function listCustomers(options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers`)
     const list = extractList(res)
     const display = list.map((r: any) => ({
       id: r.id,
@@ -91,7 +91,7 @@ export async function listReceivers(options: { json: boolean }) {
 export async function getReceiver(id: string, options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const receiver = await apiGet(ctx, `${instancePath(ctx)}/receivers/${id}`)
+    const receiver = await apiGet(ctx, `${instancePath(ctx)}/customers/${id}`)
     printResult(receiver, options.json)
   }
   catch (e) {
@@ -138,11 +138,11 @@ export async function createReceiver(options: {
       external_id: options.externalId ?? null,
       kyc_status: options.kycStatus ?? 'approved',
     }
-    const receiver = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/receivers`, body)
+    const receiver = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/customers`, body)
     const displayName = body.type === 'business'
       ? (body.legal_name || '—')
       : [body.first_name, body.last_name].filter(Boolean).join(' ').trim() || '—'
-    clack.log.success(`Created receiver ${receiver.id} (${receiver.type}, ${displayName})`)
+    clack.log.success(`Created customer ${receiver.id} (${receiver.type}, ${displayName})`)
     if (options.json)
       console.log(formatOutput(receiver, true))
   }
@@ -193,8 +193,8 @@ export async function updateReceiver(
     if (Object.keys(body).length === 0) {
       exitWithError('Provide at least one field to update (e.g. --name, --kyc-status)', 1, options.json)
     }
-    const receiver = await apiPut<Record<string, any>>(ctx, `${instancePath(ctx)}/receivers/${id}`, body)
-    clack.log.success(`Updated receiver ${id}`)
+    const receiver = await apiPut<Record<string, any>>(ctx, `${instancePath(ctx)}/customers/${id}`, body)
+    clack.log.success(`Updated customer ${id}`)
     if (options.json)
       console.log(formatOutput(receiver, true))
     else
@@ -208,8 +208,8 @@ export async function updateReceiver(
 export async function deleteReceiver(id: string, options: { json?: boolean } = {}) {
   try {
     const ctx = resolveContext()
-    await apiDelete(ctx, `${instancePath(ctx)}/receivers/${id}`)
-    clack.log.success(`Deleted receiver ${id}`)
+    await apiDelete(ctx, `${instancePath(ctx)}/customers/${id}`)
+    clack.log.success(`Deleted customer ${id}`)
   }
   catch (e) {
     handleApiError(e, options.json)
@@ -220,7 +220,7 @@ export async function deleteReceiver(id: string, options: { json?: boolean } = {
 export async function listBankAccounts(options: { receiverId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/bank-accounts`)
     const list = extractList(res)
     const display = list.map((a: any) => ({ id: a.id, type: a.type, name: a.name, status: a.status, country: a.country }))
     printResult(options.json ? list : display, options.json, ['id', 'type', 'name', 'status', 'country'])
@@ -233,7 +233,7 @@ export async function listBankAccounts(options: { receiverId: string, json: bool
 export async function getBankAccount(id: string, options: { receiverId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const account = await apiGet(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts/${id}`)
+    const account = await apiGet(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/bank-accounts/${id}`)
     printResult(account, options.json)
   }
   catch (e) {
@@ -269,7 +269,7 @@ export async function createBankAccount(options: {
       account_class: options.accountClass ?? null,
       country: options.country ?? null,
     }
-    const ba = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts`, body)
+    const ba = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/bank-accounts`, body)
     clack.log.success(`Created bank account ${ba.id} (${ba.type})`)
     if (options.json)
       console.log(formatOutput(ba, true))
@@ -282,7 +282,7 @@ export async function createBankAccount(options: {
 export async function deleteBankAccount(id: string, options: { receiverId: string, json?: boolean }) {
   try {
     const ctx = resolveContext()
-    await apiDelete(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts/${id}`)
+    await apiDelete(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/bank-accounts/${id}`)
     clack.log.success(`Deleted bank account ${id}`)
   }
   catch (e) {
@@ -294,7 +294,7 @@ export async function deleteBankAccount(id: string, options: { receiverId: strin
 export async function listBlockchainWallets(options: { receiverId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/blockchain-wallets`)
     const list = extractList(res)
     const display = list.map((w: any) => ({ id: w.id, address: truncate(w.address, 20), network: w.network }))
     printResult(options.json ? list : display, options.json, ['id', 'address', 'network'])
@@ -307,7 +307,7 @@ export async function listBlockchainWallets(options: { receiverId: string, json:
 export async function getBlockchainWallet(id: string, options: { receiverId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const wallet = await apiGet(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets/${id}`)
+    const wallet = await apiGet(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/blockchain-wallets/${id}`)
     printResult(wallet, options.json)
   }
   catch (e) {
@@ -331,7 +331,7 @@ export async function createBlockchainWallet(options: {
       name: options.name || 'CLI Blockchain Wallet',
       external_id: options.externalId ?? null,
     }
-    const wallet = await apiPost<{ id: string, network: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets`, body)
+    const wallet = await apiPost<{ id: string, network: string }>(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/blockchain-wallets`, body)
     clack.log.success(`Created blockchain wallet ${wallet.id} (${wallet.network})`)
     if (options.json)
       console.log(formatOutput(wallet, true))
@@ -344,7 +344,7 @@ export async function createBlockchainWallet(options: {
 export async function deleteBlockchainWallet(id: string, options: { receiverId: string, json?: boolean }) {
   try {
     const ctx = resolveContext()
-    await apiDelete(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets/${id}`)
+    await apiDelete(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/blockchain-wallets/${id}`)
     clack.log.success(`Deleted blockchain wallet ${id}`)
   }
   catch (e) {
@@ -662,7 +662,7 @@ export async function deleteApiKey(id: string, options: { json?: boolean } = {})
 export async function listVirtualAccounts(options: { receiverId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/virtual-accounts`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/virtual-accounts`)
     const list = extractList(res)
     const display = list.map((a: any) => ({ id: a.id, account_number: a.account_number, routing_number: a.routing_number, kyc_status: a.kyc_status }))
     printResult(options.json ? list : display, options.json, ['id', 'account_number', 'routing_number', 'kyc_status'])
@@ -675,7 +675,7 @@ export async function listVirtualAccounts(options: { receiverId: string, json: b
 export async function createVirtualAccount(options: { receiverId: string, blockchainWalletId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const account = await apiPost<{ id: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/virtual-accounts`, { blockchain_wallet_id: options.blockchainWalletId })
+    const account = await apiPost<{ id: string }>(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/virtual-accounts`, { blockchain_wallet_id: options.blockchainWalletId })
     clack.log.success(`Created virtual account ${account.id}`)
     if (options.json)
       console.log(formatOutput(account, true))
@@ -689,7 +689,7 @@ export async function createVirtualAccount(options: { receiverId: string, blockc
 export async function listOfframpWallets(options: { receiverId: string, bankAccountId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts/${options.bankAccountId}/offramp-wallets`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${options.receiverId}/bank-accounts/${options.bankAccountId}/offramp-wallets`)
     const list = extractList(res)
     const display = list.map((w: any) => ({ id: w.id, address: truncate(w.address, 20), network: w.network }))
     printResult(options.json ? list : display, options.json, ['id', 'address', 'network'])
@@ -750,7 +750,7 @@ export async function updateInstance(options: {
 export async function getReceiverLimits(receiverId: string, options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const limits = await apiGet(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limits`)
+    const limits = await apiGet(ctx, `${instancePath(ctx)}/customers/${receiverId}/limits`)
     printResult(limits, options.json)
   }
   catch (e) {
@@ -761,7 +761,7 @@ export async function getReceiverLimits(receiverId: string, options: { json: boo
 export async function getReceiverLimitsIncreaseRequests(receiverId: string, options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limits-increase-requests`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${receiverId}/limits-increase-requests`)
     const list = extractList(res)
     printResult(list, options.json)
   }
