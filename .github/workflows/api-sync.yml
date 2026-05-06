@@ -59,7 +59,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: '--model claude-sonnet-4-20250514 --allowedTools "Bash(*),Read,Edit,Write,Glob,Grep"'
+          claude_args: '--model claude-sonnet-4-6 --allowedTools "Bash(*),Read,Edit,Write,Glob,Grep"'
           prompt: |
             You are updating this CLI to match BlindPay API changes.
 
@@ -86,8 +86,8 @@ jobs:
                  - Enum changes: only update help text in src/index.ts.
             5. Bump CLI_VERSION in src/utils/constants.ts (patch for
                additive changes, minor if anything was removed).
-            6. Run `bun run typecheck` and `bun run lint:fix`. Fix any
-               errors until both are clean.
+            6. Run `bun run typecheck`, `bun run lint:fix`, and
+               `bun run test`. Fix any errors until all three are clean.
             7. Do NOT touch .github/workflows/.
             8. Do NOT create commits — leave changes in the working tree.
 

@@ -126,7 +126,7 @@ When responding to an api-sync event:
      enum values client-side).
 3. Bump CLI version in `src/utils/constants.ts` (`CLI_VERSION`) — patch
    for additive changes, minor if you removed anything.
-4. Run `bun run typecheck` and `bun run lint:fix`. Fix any errors.
+4. Run `bun run typecheck`, `bun run lint:fix`, and `bun run test`. Fix any errors.
 5. Do NOT touch `.github/workflows/`.
 6. Do NOT create commits — leave changes in the working tree.
 
