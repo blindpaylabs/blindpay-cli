@@ -814,8 +814,10 @@ describe('Error handling', () => {
 
   test('client-side validation failure (missing file) exits with code 1, not 2', async () => {
     // Code 1 = client-side error (no statusCode); code 2 = API error (has statusCode).
+    // Intentionally NOT created — we want uploadFile to discover it's missing.
+    const missing = join(tmpdir(), `blindpay-cli-test-${Date.now()}-does-not-exist.bin`)
     await expect(
-      resources.uploadFile({ file: '/tmp/blindpay-test-does-not-exist.bin', bucket: 'avatar', json: true }),
+      resources.uploadFile({ file: missing, bucket: 'avatar', json: true }),
     ).rejects.toThrow('__test_exit__1')
   })
 })
