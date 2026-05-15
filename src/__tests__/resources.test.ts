@@ -1,4 +1,7 @@
 import process from 'node:process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { unlink } from 'node:fs/promises'
 import { describe, test, expect, beforeEach, afterEach, spyOn } from 'bun:test'
 import * as resources from '../commands/resources'
 
@@ -11,7 +14,8 @@ interface FetchCall {
 
 let fetchCalls: FetchCall[] = []
 let consoleLogs: string[] = []
-let mockResponse: { status: number, body: unknown, contentType?: string | null } = { status: 200, body: {} }
+let mockResponse: { status: number, body: unknown } = { status: 200, body: {} }
+let tempFiles: string[] = []
 let originalFetch: typeof globalThis.fetch
 let originalExit: typeof process.exit
 let savedEnv: Map<string, string | undefined>
@@ -52,13 +56,13 @@ function setupTestEnv() {
       headers: (init.headers as Record<string, string>) || {},
       body: parsedBody,
     })
-    const contentType = mockResponse.contentType === undefined ? 'application/json' : mockResponse.contentType
-    const responseBody = contentType === null
-      ? ''
-      : typeof mockResponse.body === 'string' ? mockResponse.body : JSON.stringify(mockResponse.body)
-    const headers: Record<string, string> = {}
-    if (contentType !== null) headers['content-type'] = contentType
-    return new Response(responseBody, { status: mockResponse.status, headers })
+    const responseBody = typeof mockResponse.body === 'string'
+      ? mockResponse.body
+      : JSON.stringify(mockResponse.body)
+    return new Response(responseBody, {
+      status: mockResponse.status,
+      headers: { 'content-type': 'application/json' },
+    })
   }) as typeof globalThis.fetch
 
   originalExit = process.exit
@@ -67,7 +71,7 @@ function setupTestEnv() {
   }) as never
 }
 
-function teardownTestEnv() {
+async function teardownTestEnv() {
   consoleSpy.mockRestore()
   globalThis.fetch = originalFetch
   ;(process as unknown as { exit: typeof process.exit }).exit = originalExit
@@ -75,6 +79,17 @@ function teardownTestEnv() {
     if (v !== undefined) process.env[k] = v
     else delete process.env[k]
   }
+  for (const path of tempFiles) {
+    await unlink(path).catch(() => {})
+  }
+  tempFiles = []
+}
+
+async function makeTempFile(name: string, contents = 'hello'): Promise<string> {
+  const path = join(tmpdir(), `blindpay-cli-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${name}`)
+  await Bun.write(path, contents)
+  tempFiles.push(path)
+  return path
 }
 
 function lastCall(): FetchCall {
@@ -115,17 +130,20 @@ describe('Receivers', () => {
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz`)
   })
 
-  test('createReceiver → POST /receivers with split name', async () => {
+  test('createReceiver → POST /receivers (splits --name into first/last, fills defaults)', async () => {
     mockResponse.body = { id: 're_new', type: 'individual' }
     await resources.createReceiver({ email: 'a@b.com', name: 'Jane Doe', json: true })
     expect(lastCall().method).toBe('POST')
     expect(lastCall().url).toBe(`${BASE}/receivers`)
-    expect(lastCall().body).toMatchObject({
+    expect(lastCall().body).toEqual({
       type: 'individual',
       email: 'a@b.com',
+      tax_id: null,
       first_name: 'Jane',
       last_name: 'Doe',
+      legal_name: null,
       country: 'US',
+      external_id: null,
       kyc_status: 'approved',
     })
   })
@@ -195,7 +213,7 @@ describe('Bank Accounts', () => {
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts/ba_1`)
   })
 
-  test('createBankAccount → POST /receivers/:rid/bank-accounts with snake_case body', async () => {
+  test('createBankAccount → POST /receivers/:rid/bank-accounts (snake_cases keys, defaults unset to null)', async () => {
     mockResponse.body = { id: 'ba_new', type: 'ach' }
     await resources.createBankAccount({
       receiverId: 're_xyz',
@@ -207,11 +225,18 @@ describe('Bank Accounts', () => {
     })
     expect(lastCall().method).toBe('POST')
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts`)
-    expect(lastCall().body).toMatchObject({
+    expect(lastCall().body).toEqual({
       type: 'ach',
+      name: 'CLI Bank Account',
+      recipient_relationship: null,
+      pix_key: null,
       beneficiary_name: 'Jane',
       routing_number: '021000021',
       account_number: '123456789',
+      account_type: null,
+      account_class: null,
+      country: null,
+      swift_ifsc_branch_code: null,
     })
   })
 
@@ -239,7 +264,7 @@ describe('Blockchain Wallets', () => {
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/blockchain-wallets/bw_1`)
   })
 
-  test('createBlockchainWallet → POST with address + network', async () => {
+  test('createBlockchainWallet → POST /receivers/:rid/blockchain-wallets', async () => {
     mockResponse.body = { id: 'bw_new', network: 'base' }
     await resources.createBlockchainWallet({
       receiverId: 're_xyz',
@@ -248,7 +273,13 @@ describe('Blockchain Wallets', () => {
       json: true,
     })
     expect(lastCall().method).toBe('POST')
-    expect(lastCall().body).toMatchObject({ address: '0xabc', network: 'base' })
+    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/blockchain-wallets`)
+    expect(lastCall().body).toEqual({
+      address: '0xabc',
+      network: 'base',
+      name: 'CLI Blockchain Wallet',
+      external_id: null,
+    })
   })
 
   test('deleteBlockchainWallet → DELETE', async () => {
@@ -269,7 +300,7 @@ describe('Payouts', () => {
     expect(lastCall().url).toBe(`${BASE}/payouts`)
   })
 
-  test('listPayouts with status filter → query string', async () => {
+  test('listPayouts with --status → GET /payouts?status=…', async () => {
     mockResponse.body = []
     await resources.listPayouts({ json: true, status: 'processing' })
     expect(lastCall().url).toBe(`${BASE}/payouts?status=processing`)
@@ -343,9 +374,10 @@ describe('Payins', () => {
     })
     expect(lastCall().method).toBe('POST')
     expect(lastCall().url).toBe(`${BASE}/payin-quotes`)
-    expect(lastCall().body).toMatchObject({
+    expect(lastCall().body).toEqual({
       blockchain_wallet_id: 'bw_1',
       payment_method: 'pix',
+      request_amount: 5000,
       currency: 'BRL',
     })
   })
@@ -380,7 +412,7 @@ describe('Quotes', () => {
     expect(lastCall().url).toBe(`${BASE}/fx-rates?from=USD&to=BRL`)
   })
 
-  test('getQuoteFxRate without params → no query string', async () => {
+  test('getQuoteFxRate without --from/--to → GET /fx-rates (no query string)', async () => {
     mockResponse.body = {}
     await resources.getQuoteFxRate({ json: true })
     expect(lastCall().url).toBe(`${BASE}/fx-rates`)
@@ -397,12 +429,12 @@ describe('Webhook Endpoints', () => {
     expect(lastCall().url).toBe(`${BASE}/webhook-endpoints`)
   })
 
-  test('createWebhookEndpoint → POST with url + description', async () => {
+  test('createWebhookEndpoint → POST /webhook-endpoints', async () => {
     mockResponse.body = { id: 'we_new' }
     await resources.createWebhookEndpoint({ url: 'https://x.com/hook', description: 'd', json: true })
     expect(lastCall().method).toBe('POST')
     expect(lastCall().url).toBe(`${BASE}/webhook-endpoints`)
-    expect(lastCall().body).toMatchObject({ url: 'https://x.com/hook', description: 'd' })
+    expect(lastCall().body).toEqual({ url: 'https://x.com/hook', description: 'd' })
   })
 
   test('deleteWebhookEndpoint → DELETE', async () => {
@@ -423,7 +455,7 @@ describe('Partner Fees', () => {
     expect(lastCall().url).toBe(`${BASE}/partner-fees`)
   })
 
-  test('createPartnerFee → POST with cents-scaled fees and optional wallet addresses', async () => {
+  test('createPartnerFee → POST /partner-fees (cents-scales fees ×100, fills unset to 0/null)', async () => {
     mockResponse.body = { id: 'pf_new' }
     await resources.createPartnerFee({
       payoutPercentage: '2.5',
@@ -434,7 +466,10 @@ describe('Partner Fees', () => {
     })
     expect(lastCall().method).toBe('POST')
     expect(lastCall().url).toBe(`${BASE}/partner-fees`)
-    expect(lastCall().body).toMatchObject({
+    expect(lastCall().body).toEqual({
+      name: 'CLI Partner Fee',
+      payin_percentage_fee: 0,
+      payin_flat_fee: 0,
       payout_percentage_fee: 250,
       payout_flat_fee: 10000,
       evm_wallet_address: '0xevm',
@@ -460,12 +495,12 @@ describe('API Keys', () => {
     expect(lastCall().url).toBe(`${BASE}/api-keys`)
   })
 
-  test('createApiKey → POST', async () => {
+  test('createApiKey → POST /api-keys', async () => {
     mockResponse.body = { id: 'ak_new', key: 'sk_...' }
     await resources.createApiKey({ name: 'test', permission: 'read', json: true })
     expect(lastCall().method).toBe('POST')
     expect(lastCall().url).toBe(`${BASE}/api-keys`)
-    expect(lastCall().body).toMatchObject({ name: 'test', permission: 'read' })
+    expect(lastCall().body).toEqual({ name: 'test', permission: 'read' })
   })
 
   test('deleteApiKey → DELETE', async () => {
@@ -486,12 +521,12 @@ describe('Virtual Accounts', () => {
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/virtual-accounts`)
   })
 
-  test('createVirtualAccount → POST with blockchain_wallet_id', async () => {
+  test('createVirtualAccount → POST /receivers/:rid/virtual-accounts', async () => {
     mockResponse.body = { id: 'va_new' }
     await resources.createVirtualAccount({ receiverId: 're_xyz', blockchainWalletId: 'bw_1', json: true })
     expect(lastCall().method).toBe('POST')
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/virtual-accounts`)
-    expect(lastCall().body).toMatchObject({ blockchain_wallet_id: 'bw_1' })
+    expect(lastCall().body).toEqual({ blockchain_wallet_id: 'bw_1' })
   })
 })
 
@@ -584,7 +619,7 @@ describe('Wallets (custodial)', () => {
     expect(lastCall().body).toEqual({ network: 'polygon', name: 'Main', external_id: 'ext-1' })
   })
 
-  test('createWallet without externalId → body omits external_id', async () => {
+  test('createWallet without --external-id → body omits external_id', async () => {
     mockResponse.body = { id: 'bl_new', network: 'polygon' }
     await resources.createWallet({ receiverId: 're_xyz', network: 'polygon', name: 'Main', json: true })
     expect(lastCall().body).toEqual({ network: 'polygon', name: 'Main' })
@@ -662,7 +697,7 @@ describe('Transfer Quotes', () => {
     })
   })
 
-  test('createTransferQuote defaults cover_fees to false when omitted', async () => {
+  test('createTransferQuote without --cover-fees → body.cover_fees defaults to false', async () => {
     mockResponse.body = { id: 'tq_new' }
     await resources.createTransferQuote({
       walletId: 'bl_1',
@@ -710,7 +745,7 @@ describe('Terms of Service', () => {
     })
   })
 
-  test('initiateTos omits optional fields when not provided', async () => {
+  test('initiateTos without --receiver-id/--redirect-url → body omits both', async () => {
     mockResponse.body = { url: 'https://...' }
     await resources.initiateTos({ idempotencyKey: 'idem-2', json: true })
     expect(lastCall().body).toEqual({ idempotency_key: 'idem-2' })
@@ -722,8 +757,7 @@ describe('Upload', () => {
   afterEach(teardownTestEnv)
 
   test('uploadFile → POST /v1/upload with FormData carrying `file` and `bucket`', async () => {
-    const tmpPath = `/tmp/blindpay-cli-upload-test-${Date.now()}.txt`
-    await Bun.write(tmpPath, 'hello')
+    const tmpPath = await makeTempFile('upload.txt')
 
     mockResponse.body = { file_url: 'https://files.blindpay.com/x.txt' }
     await resources.uploadFile({ file: tmpPath, bucket: 'limit_increase', json: true })
@@ -733,13 +767,11 @@ describe('Upload', () => {
     expect(lastCall().body).toBeInstanceOf(FormData)
     const form = lastCall().body as FormData
     expect(form.get('bucket')).toBe('limit_increase')
-    const filePart = form.get('file')
-    expect(filePart).toBeInstanceOf(Blob)
+    expect(form.get('file')).toBeInstanceOf(Blob)
   })
 
-  test('uploadFile with instanceId → appends ?instance_id= query param', async () => {
-    const tmpPath = `/tmp/blindpay-cli-upload-test-${Date.now()}-2.txt`
-    await Bun.write(tmpPath, 'hello')
+  test('uploadFile with --instance-id → /v1/upload?instance_id=…', async () => {
+    const tmpPath = await makeTempFile('upload2.txt')
 
     mockResponse.body = { file_url: 'https://files.blindpay.com/x.txt' }
     await resources.uploadFile({ file: tmpPath, bucket: 'avatar', instanceId: 'in_override', json: true })
