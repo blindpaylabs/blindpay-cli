@@ -44,6 +44,20 @@ import {
   updateInstance,
   listAvailableRails,
   getAvailableBankDetails,
+  createReceiverLimitIncrease,
+  listWallets,
+  getWallet,
+  getWalletBalance,
+  createWallet,
+  deleteWallet,
+  listTransfers,
+  getTransfer,
+  createTransfer,
+  trackTransfer,
+  createTransferQuote,
+  getInstanceFees,
+  initiateTos,
+  uploadFile,
 } from './commands/resources'
 import { getConfig, setConfig, clearConfig, getConfigPath } from './utils/config'
 import { CLI_VERSION } from './utils/constants'
@@ -188,9 +202,20 @@ receivers
 
 receivers
   .command('limits_increase_requests <id>')
-  .description('Get receiver limits increase requests')
+  .description('Get receiver limit-increase requests')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => getReceiverLimitsIncreaseRequests(id, opts))
+
+receivers
+  .command('create_limit_increase <id>')
+  .description('Request a limit increase for a receiver')
+  .requiredOption('--per-transaction <amount>', 'Per-transaction limit in cents')
+  .requiredOption('--daily <amount>', 'Daily limit in cents')
+  .requiredOption('--monthly <amount>', 'Monthly limit in cents')
+  .requiredOption('--supporting-document-type <type>', 'Supporting document type (individual_bank_statement, individual_tax_return, individual_proof_of_income, business_bank_statement, business_financial_statements, business_tax_return)')
+  .requiredOption('--supporting-document-file <url>', 'Supporting document URL (upload via `blindpay upload` first)')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => createReceiverLimitIncrease(id, opts))
 
 // ── Bank Accounts ───────────────────────────────────────────────────────
 const bankAccounts = program.command('bank_accounts').description('Manage bank accounts')
@@ -565,6 +590,156 @@ available
   .requiredOption('--rail <rail>', 'Rail type (ach, wire, pix, pix_safe, spei_bitso, transfers_bitso, ach_cop_bitso, international_swift)')
   .option('--json', 'Output as JSON', false)
   .action(opts => getAvailableBankDetails(opts))
+
+// ── Wallets (custodial) ────────────────────────────────────────────────
+const wallets = program.command('wallets').description('Manage custodial wallets (BlindPay-managed, with balance)')
+  .addHelpText('after', `
+Examples:
+  $ blindpay wallets list --receiver-id <id>
+  $ blindpay wallets get <id> --receiver-id <receiver-id>
+  $ blindpay wallets balance <id> --receiver-id <receiver-id>
+  $ blindpay wallets create --receiver-id <id> --network polygon --name "Main Wallet"
+  $ blindpay wallets delete <id> --receiver-id <receiver-id>`)
+
+wallets
+  .command('list')
+  .description('List custodial wallets for a receiver')
+  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => listWallets(opts))
+
+wallets
+  .command('get <id>')
+  .description('Get a custodial wallet by ID')
+  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => getWallet(id, opts))
+
+wallets
+  .command('balance <id>')
+  .description('Get a custodial wallet balance (USDC/USDT/USDB)')
+  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => getWalletBalance(id, opts))
+
+wallets
+  .command('create')
+  .description('Create a new custodial wallet')
+  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--network <network>', 'Network')
+  .requiredOption('--name <name>', 'Wallet name')
+  .option('--external-id <id>', 'External ID')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => createWallet(opts))
+
+wallets
+  .command('delete <id>')
+  .description('Delete a custodial wallet')
+  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => deleteWallet(id, opts))
+
+// ── Transfers ──────────────────────────────────────────────────────────
+const transfers = program.command('transfers').description('Manage transfers (wallet → wallet, cross-chain)')
+  .addHelpText('after', `
+Examples:
+  $ blindpay transfers list
+  $ blindpay transfers get <id>
+  $ blindpay transfers create --transfer-quote-id <id>
+  $ blindpay transfers track <id>`)
+
+transfers
+  .command('list')
+  .description('List transfers')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => listTransfers(opts))
+
+transfers
+  .command('get <id>')
+  .description('Get a transfer by ID')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => getTransfer(id, opts))
+
+transfers
+  .command('create')
+  .description('Create a transfer from a transfer quote')
+  .requiredOption('--transfer-quote-id <id>', 'Transfer quote ID')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => createTransfer(opts))
+
+transfers
+  .command('track <id>')
+  .description('Public tracking endpoint for a transfer (no auth required)')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => trackTransfer(id, opts))
+
+// ── Transfer Quotes ────────────────────────────────────────────────────
+const transferQuotes = program.command('transfer_quotes').description('Manage transfer quotes')
+  .addHelpText('after', `
+Examples:
+  $ blindpay transfer_quotes create --wallet-id <id> --sender-token USDC \\
+      --receiver-wallet-address 0x... --receiver-token USDC --receiver-network polygon \\
+      --request-amount 1000 --amount-reference sender`)
+
+transferQuotes
+  .command('create')
+  .description('Create a transfer quote')
+  .requiredOption('--wallet-id <id>', 'Sender wallet ID (bl_...)')
+  .requiredOption('--sender-token <token>', 'Sender token (USDC, USDT, ...)')
+  .requiredOption('--receiver-wallet-address <addr>', 'Receiver wallet address')
+  .requiredOption('--receiver-token <token>', 'Receiver token')
+  .requiredOption('--receiver-network <network>', 'Receiver network')
+  .requiredOption('--request-amount <amount>', 'Request amount in cents')
+  .requiredOption('--amount-reference <ref>', 'Amount reference (sender or receiver)')
+  .option('--cover-fees', 'Sender covers the fees', false)
+  .option('--partner-fee-id <id>', 'Partner fee ID')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => createTransferQuote(opts))
+
+// ── Fees ───────────────────────────────────────────────────────────────
+const fees = program.command('fees').description('Inspect instance fees')
+  .addHelpText('after', `
+Examples:
+  $ blindpay fees get
+  $ blindpay fees get --json`)
+
+fees
+  .command('get')
+  .description('Get all fees for the current instance')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => getInstanceFees(opts))
+
+// ── Terms of Service ───────────────────────────────────────────────────
+const tos = program.command('tos').description('Initiate Terms of Service flow')
+  .addHelpText('after', `
+Examples:
+  $ blindpay tos initiate --idempotency-key <key>
+  $ blindpay tos initiate --idempotency-key <key> --receiver-id <id> --redirect-url https://example.com`)
+
+tos
+  .command('initiate')
+  .description('Initiate a Terms of Service session and return a hosted URL')
+  .requiredOption('--idempotency-key <key>', 'Idempotency key')
+  .option('--receiver-id <id>', 'Receiver ID')
+  .option('--redirect-url <url>', 'Redirect URL after acceptance')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => initiateTos(opts))
+
+// ── Upload ─────────────────────────────────────────────────────────────
+const upload = program.command('upload').description('Upload a file to a BlindPay bucket')
+  .addHelpText('after', `
+Examples:
+  $ blindpay upload file --file ./document.pdf --bucket limit_increase
+  $ blindpay upload file --file ./avatar.png --bucket avatar --instance-id <id>`)
+
+upload
+  .command('file')
+  .description('Upload a file (returns a file_url usable in other create commands)')
+  .requiredOption('--file <path>', 'Path to the file to upload')
+  .requiredOption('--bucket <bucket>', 'Target bucket (avatar, onboarding, limit_increase)')
+  .option('--instance-id <id>', 'Override the configured instance ID')
+  .option('--json', 'Output as JSON', false)
+  .action(opts => uploadFile(opts))
 
 // ── Schema ─────────────────────────────────────────────────────────────
 const schema = program.command('schema').description('Introspect CLI resource schemas (JSON output for LLM/automation use)')
