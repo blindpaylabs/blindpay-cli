@@ -116,21 +116,21 @@ describe('Receivers', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listReceivers → GET /receivers', async () => {
+  test('lists receivers', async () => {
     mockResponse.body = { data: [{ id: 're_1', type: 'individual', email: 'a@b.com' }] }
     await resources.listReceivers({ json: true })
     expect(lastCall().method).toBe('GET')
     expect(lastCall().url).toBe(`${BASE}/receivers`)
   })
 
-  test('getReceiver → GET /receivers/:id', async () => {
+  test('fetches a receiver by id', async () => {
     mockResponse.body = { id: 're_xyz' }
     await resources.getReceiver('re_xyz', { json: true })
     expect(lastCall().method).toBe('GET')
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz`)
   })
 
-  test('createReceiver → POST /receivers (splits --name into first/last, fills defaults)', async () => {
+  test('creates a receiver, splitting --name into first_name and last_name and filling defaults', async () => {
     mockResponse.body = { id: 're_new', type: 'individual' }
     await resources.createReceiver({ email: 'a@b.com', name: 'Jane Doe', json: true })
     expect(lastCall().method).toBe('POST')
@@ -148,7 +148,7 @@ describe('Receivers', () => {
     })
   })
 
-  test('updateReceiver → PUT /receivers/:id with only provided fields', async () => {
+  test('updates only the fields explicitly passed via flags', async () => {
     mockResponse.body = { id: 're_xyz' }
     await resources.updateReceiver('re_xyz', { email: 'new@b.com', json: true })
     expect(lastCall().method).toBe('PUT')
@@ -156,26 +156,26 @@ describe('Receivers', () => {
     expect(lastCall().body).toEqual({ email: 'new@b.com' })
   })
 
-  test('deleteReceiver → DELETE /receivers/:id', async () => {
+  test('deletes a receiver by id', async () => {
     mockResponse.body = { success: true }
     await resources.deleteReceiver('re_xyz', { json: true })
     expect(lastCall().method).toBe('DELETE')
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz`)
   })
 
-  test('getReceiverLimits → GET /limits/receivers/:id (corrected path)', async () => {
+  test('fetches receiver limits', async () => {
     mockResponse.body = { per_transaction: 100 }
     await resources.getReceiverLimits('re_xyz', { json: true })
     expect(lastCall().url).toBe(`${BASE}/limits/receivers/re_xyz`)
   })
 
-  test('getReceiverLimitsIncreaseRequests → GET /receivers/:id/limit-increase (corrected path)', async () => {
+  test('fetches receiver limit-increase requests', async () => {
     mockResponse.body = []
     await resources.getReceiverLimitsIncreaseRequests('re_xyz', { json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/limit-increase`)
   })
 
-  test('createReceiverLimitIncrease → POST /receivers/:id/limit-increase with parsed amounts', async () => {
+  test('creates a limit-increase request with monetary fields parsed as integers', async () => {
     mockResponse.body = { id: 'rl_new' }
     await resources.createReceiverLimitIncrease('re_xyz', {
       perTransaction: '100000',
@@ -201,19 +201,19 @@ describe('Bank Accounts', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listBankAccounts → GET /receivers/:rid/bank-accounts', async () => {
+  test('lists bank accounts for a receiver', async () => {
     mockResponse.body = []
     await resources.listBankAccounts({ receiverId: 're_xyz', json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts`)
   })
 
-  test('getBankAccount → GET /receivers/:rid/bank-accounts/:id', async () => {
+  test('fetches a bank account by id', async () => {
     mockResponse.body = { id: 'ba_1' }
     await resources.getBankAccount('ba_1', { receiverId: 're_xyz', json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts/ba_1`)
   })
 
-  test('createBankAccount → POST /receivers/:rid/bank-accounts (snake_cases keys, defaults unset to null)', async () => {
+  test('creates a bank account, snake_casing keys and defaulting unset fields to null', async () => {
     mockResponse.body = { id: 'ba_new', type: 'ach' }
     await resources.createBankAccount({
       receiverId: 're_xyz',
@@ -240,7 +240,7 @@ describe('Bank Accounts', () => {
     })
   })
 
-  test('deleteBankAccount → DELETE', async () => {
+  test('deletes a bank account', async () => {
     mockResponse.body = { success: true }
     await resources.deleteBankAccount('ba_1', { receiverId: 're_xyz', json: true })
     expect(lastCall().method).toBe('DELETE')
@@ -252,19 +252,19 @@ describe('Blockchain Wallets', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listBlockchainWallets → GET', async () => {
+  test('lists blockchain wallets for a receiver', async () => {
     mockResponse.body = []
     await resources.listBlockchainWallets({ receiverId: 're_xyz', json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/blockchain-wallets`)
   })
 
-  test('getBlockchainWallet → GET by id', async () => {
+  test('fetches a blockchain wallet by id', async () => {
     mockResponse.body = { id: 'bw_1' }
     await resources.getBlockchainWallet('bw_1', { receiverId: 're_xyz', json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/blockchain-wallets/bw_1`)
   })
 
-  test('createBlockchainWallet → POST /receivers/:rid/blockchain-wallets', async () => {
+  test('creates a blockchain wallet for a receiver', async () => {
     mockResponse.body = { id: 'bw_new', network: 'base' }
     await resources.createBlockchainWallet({
       receiverId: 're_xyz',
@@ -282,7 +282,7 @@ describe('Blockchain Wallets', () => {
     })
   })
 
-  test('deleteBlockchainWallet → DELETE', async () => {
+  test('deletes a blockchain wallet', async () => {
     mockResponse.body = { success: true }
     await resources.deleteBlockchainWallet('bw_1', { receiverId: 're_xyz', json: true })
     expect(lastCall().method).toBe('DELETE')
@@ -294,25 +294,25 @@ describe('Payouts', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listPayouts → GET /payouts', async () => {
+  test('lists payouts', async () => {
     mockResponse.body = []
     await resources.listPayouts({ json: true })
     expect(lastCall().url).toBe(`${BASE}/payouts`)
   })
 
-  test('listPayouts with --status → GET /payouts?status=…', async () => {
+  test('filters payouts by --status', async () => {
     mockResponse.body = []
     await resources.listPayouts({ json: true, status: 'processing' })
     expect(lastCall().url).toBe(`${BASE}/payouts?status=processing`)
   })
 
-  test('getPayout → GET /payouts/:id', async () => {
+  test('fetches a payout by id', async () => {
     mockResponse.body = { id: 'po_1' }
     await resources.getPayout('po_1', { json: true })
     expect(lastCall().url).toBe(`${BASE}/payouts/po_1`)
   })
 
-  test('createPayout → POST /payouts/evm by default', async () => {
+  test('creates an EVM payout by default', async () => {
     mockResponse.body = { id: 'po_new' }
     await resources.createPayout({ quoteId: 'qu_1', senderWalletAddress: '0xabc', json: true })
     expect(lastCall().method).toBe('POST')
@@ -320,13 +320,13 @@ describe('Payouts', () => {
     expect(lastCall().body).toEqual({ quote_id: 'qu_1', sender_wallet_address: '0xabc' })
   })
 
-  test('createPayout with --network solana → /payouts/solana', async () => {
+  test('routes a Solana payout to /payouts/solana', async () => {
     mockResponse.body = { id: 'po_new' }
     await resources.createPayout({ quoteId: 'qu_1', network: 'solana', senderWalletAddress: 'sol_addr', json: true })
     expect(lastCall().url).toBe(`${BASE}/payouts/solana`)
   })
 
-  test('createPayout with --network stellar → /payouts/stellar', async () => {
+  test('routes a Stellar payout to /payouts/stellar', async () => {
     mockResponse.body = { id: 'po_new' }
     await resources.createPayout({ quoteId: 'qu_1', network: 'stellar', senderWalletAddress: 'G...', json: true })
     expect(lastCall().url).toBe(`${BASE}/payouts/stellar`)
@@ -337,19 +337,19 @@ describe('Payins', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listPayins → GET /payins', async () => {
+  test('lists payins', async () => {
     mockResponse.body = []
     await resources.listPayins({ json: true })
     expect(lastCall().url).toBe(`${BASE}/payins`)
   })
 
-  test('getPayin → GET /payins/:id', async () => {
+  test('fetches a payin by id', async () => {
     mockResponse.body = { id: 'pi_1' }
     await resources.getPayin('pi_1', { json: true })
     expect(lastCall().url).toBe(`${BASE}/payins/pi_1`)
   })
 
-  test('createPayin → POST /payins/{network} (defaults to evm)', async () => {
+  test('creates an EVM payin by default', async () => {
     mockResponse.body = { id: 'pi_new', status: 'pending' }
     await resources.createPayin({ payinQuoteId: 'pq_1', externalId: 'ext-1', json: true })
     expect(lastCall().method).toBe('POST')
@@ -357,13 +357,13 @@ describe('Payins', () => {
     expect(lastCall().body).toEqual({ payin_quote_id: 'pq_1', external_id: 'ext-1' })
   })
 
-  test('createPayin with --network solana → /payins/solana', async () => {
+  test('routes a Solana payin to /payins/solana', async () => {
     mockResponse.body = { id: 'pi_new', status: 'pending' }
     await resources.createPayin({ payinQuoteId: 'pq_1', network: 'solana', json: true })
     expect(lastCall().url).toBe(`${BASE}/payins/solana`)
   })
 
-  test('createPayinQuote → POST /payin-quotes', async () => {
+  test('creates a payin quote', async () => {
     mockResponse.body = { id: 'pq_new' }
     await resources.createPayinQuote({
       blockchainWalletId: 'bw_1',
@@ -387,7 +387,7 @@ describe('Quotes', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('createQuote → POST /quotes with bank_account_id, network, token, request_amount', async () => {
+  test('creates a payout quote with bank account, network, token, and request amount', async () => {
     mockResponse.body = { id: 'qu_new', sender_amount: 0, receiver_amount: 0 }
     await resources.createQuote({
       bankAccountId: 'ba_1',
@@ -406,13 +406,13 @@ describe('Quotes', () => {
     })
   })
 
-  test('getQuoteFxRate → GET /fx-rates with optional query params', async () => {
+  test('fetches FX rates with --from/--to passed as query params', async () => {
     mockResponse.body = { rate: 5.05 }
     await resources.getQuoteFxRate({ from: 'USD', to: 'BRL', json: true })
     expect(lastCall().url).toBe(`${BASE}/fx-rates?from=USD&to=BRL`)
   })
 
-  test('getQuoteFxRate without --from/--to → GET /fx-rates (no query string)', async () => {
+  test('fetches FX rates without a query string when --from/--to are absent', async () => {
     mockResponse.body = {}
     await resources.getQuoteFxRate({ json: true })
     expect(lastCall().url).toBe(`${BASE}/fx-rates`)
@@ -423,13 +423,13 @@ describe('Webhook Endpoints', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listWebhookEndpoints → GET /webhook-endpoints', async () => {
+  test('lists webhook endpoints', async () => {
     mockResponse.body = []
     await resources.listWebhookEndpoints({ json: true })
     expect(lastCall().url).toBe(`${BASE}/webhook-endpoints`)
   })
 
-  test('createWebhookEndpoint → POST /webhook-endpoints', async () => {
+  test('creates a webhook endpoint', async () => {
     mockResponse.body = { id: 'we_new' }
     await resources.createWebhookEndpoint({ url: 'https://x.com/hook', description: 'd', json: true })
     expect(lastCall().method).toBe('POST')
@@ -437,7 +437,7 @@ describe('Webhook Endpoints', () => {
     expect(lastCall().body).toEqual({ url: 'https://x.com/hook', description: 'd' })
   })
 
-  test('deleteWebhookEndpoint → DELETE', async () => {
+  test('deletes a webhook endpoint', async () => {
     mockResponse.body = { success: true }
     await resources.deleteWebhookEndpoint('we_1', { json: true })
     expect(lastCall().method).toBe('DELETE')
@@ -449,13 +449,13 @@ describe('Partner Fees', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listPartnerFees → GET /partner-fees', async () => {
+  test('lists partner fees', async () => {
     mockResponse.body = []
     await resources.listPartnerFees({ json: true })
     expect(lastCall().url).toBe(`${BASE}/partner-fees`)
   })
 
-  test('createPartnerFee → POST /partner-fees (cents-scales fees ×100, fills unset to 0/null)', async () => {
+  test('creates a partner fee, cents-scaling percentages and flats and defaulting unset rails to zero', async () => {
     mockResponse.body = { id: 'pf_new' }
     await resources.createPartnerFee({
       payoutPercentage: '2.5',
@@ -477,7 +477,7 @@ describe('Partner Fees', () => {
     })
   })
 
-  test('deletePartnerFee → DELETE', async () => {
+  test('deletes a partner fee', async () => {
     mockResponse.body = { success: true }
     await resources.deletePartnerFee('pf_1', { json: true })
     expect(lastCall().method).toBe('DELETE')
@@ -489,13 +489,13 @@ describe('API Keys', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listApiKeys → GET /api-keys', async () => {
+  test('lists API keys', async () => {
     mockResponse.body = []
     await resources.listApiKeys({ json: true })
     expect(lastCall().url).toBe(`${BASE}/api-keys`)
   })
 
-  test('createApiKey → POST /api-keys', async () => {
+  test('creates an API key', async () => {
     mockResponse.body = { id: 'ak_new', key: 'sk_...' }
     await resources.createApiKey({ name: 'test', permission: 'read', json: true })
     expect(lastCall().method).toBe('POST')
@@ -503,7 +503,7 @@ describe('API Keys', () => {
     expect(lastCall().body).toEqual({ name: 'test', permission: 'read' })
   })
 
-  test('deleteApiKey → DELETE', async () => {
+  test('deletes an API key', async () => {
     mockResponse.body = { success: true }
     await resources.deleteApiKey('ak_1', { json: true })
     expect(lastCall().method).toBe('DELETE')
@@ -515,13 +515,13 @@ describe('Virtual Accounts', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listVirtualAccounts → GET by receiver', async () => {
+  test('lists virtual accounts for a receiver', async () => {
     mockResponse.body = []
     await resources.listVirtualAccounts({ receiverId: 're_xyz', json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/virtual-accounts`)
   })
 
-  test('createVirtualAccount → POST /receivers/:rid/virtual-accounts', async () => {
+  test('creates a virtual account for a receiver', async () => {
     mockResponse.body = { id: 'va_new' }
     await resources.createVirtualAccount({ receiverId: 're_xyz', blockchainWalletId: 'bw_1', json: true })
     expect(lastCall().method).toBe('POST')
@@ -534,7 +534,7 @@ describe('Offramp Wallets', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listOfframpWallets → GET nested path', async () => {
+  test('lists offramp wallets for a bank account', async () => {
     mockResponse.body = []
     await resources.listOfframpWallets({ receiverId: 're_xyz', bankAccountId: 'ba_1', json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts/ba_1/offramp-wallets`)
@@ -545,19 +545,19 @@ describe('Instances', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('getInstance → GET /instances/{id}', async () => {
+  test('fetches the current instance', async () => {
     mockResponse.body = { id: 'in_testInstance' }
     await resources.getInstance({ json: true })
     expect(lastCall().url).toBe(`${BASE}`)
   })
 
-  test('listInstanceMembers → GET /members', async () => {
+  test('lists instance members', async () => {
     mockResponse.body = []
     await resources.listInstanceMembers({ json: true })
     expect(lastCall().url).toBe(`${BASE}/members`)
   })
 
-  test('updateInstance → PUT with name', async () => {
+  test('updates the instance name', async () => {
     mockResponse.body = { id: 'in_testInstance', name: 'New' }
     await resources.updateInstance({ name: 'New', json: true })
     expect(lastCall().method).toBe('PUT')
@@ -570,13 +570,13 @@ describe('Available', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listAvailableRails → GET /available/rails', async () => {
+  test('lists available payment rails', async () => {
     mockResponse.body = []
     await resources.listAvailableRails({ json: true })
     expect(lastCall().url).toBe(`${BASE}/available/rails`)
   })
 
-  test('getAvailableBankDetails → GET /available/bank-details/:rail', async () => {
+  test('fetches required bank-detail fields for a given rail', async () => {
     mockResponse.body = {}
     await resources.getAvailableBankDetails({ rail: 'pix', json: true })
     expect(lastCall().url).toBe(`${BASE}/available/bank-details/pix`)
@@ -587,25 +587,25 @@ describe('Wallets (custodial)', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listWallets → GET /receivers/:rid/wallets', async () => {
+  test('lists custodial wallets for a receiver', async () => {
     mockResponse.body = []
     await resources.listWallets({ receiverId: 're_xyz', json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/wallets`)
   })
 
-  test('getWallet → GET /receivers/:rid/wallets/:id', async () => {
+  test('fetches a custodial wallet by id', async () => {
     mockResponse.body = { id: 'bl_1' }
     await resources.getWallet('bl_1', { receiverId: 're_xyz', json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/wallets/bl_1`)
   })
 
-  test('getWalletBalance → GET /wallets/:id/balance', async () => {
+  test('fetches a custodial wallet balance', async () => {
     mockResponse.body = { USDC: { amount: 0 } }
     await resources.getWalletBalance('bl_1', { receiverId: 're_xyz', json: true })
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/wallets/bl_1/balance`)
   })
 
-  test('createWallet → POST with network, name, and optional external_id', async () => {
+  test('creates a custodial wallet with --external-id', async () => {
     mockResponse.body = { id: 'bl_new', network: 'polygon' }
     await resources.createWallet({
       receiverId: 're_xyz',
@@ -619,13 +619,13 @@ describe('Wallets (custodial)', () => {
     expect(lastCall().body).toEqual({ network: 'polygon', name: 'Main', external_id: 'ext-1' })
   })
 
-  test('createWallet without --external-id → body omits external_id', async () => {
+  test('omits external_id from the body when --external-id is not passed', async () => {
     mockResponse.body = { id: 'bl_new', network: 'polygon' }
     await resources.createWallet({ receiverId: 're_xyz', network: 'polygon', name: 'Main', json: true })
     expect(lastCall().body).toEqual({ network: 'polygon', name: 'Main' })
   })
 
-  test('deleteWallet → DELETE', async () => {
+  test('deletes a custodial wallet', async () => {
     mockResponse.body = { success: true }
     await resources.deleteWallet('bl_1', { receiverId: 're_xyz', json: true })
     expect(lastCall().method).toBe('DELETE')
@@ -637,19 +637,19 @@ describe('Transfers', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('listTransfers → GET /transfers', async () => {
+  test('lists transfers', async () => {
     mockResponse.body = { data: [], pagination: {} }
     await resources.listTransfers({ json: true })
     expect(lastCall().url).toBe(`${BASE}/transfers`)
   })
 
-  test('getTransfer → GET /transfers/:id', async () => {
+  test('fetches a transfer by id', async () => {
     mockResponse.body = { id: 'tr_1' }
     await resources.getTransfer('tr_1', { json: true })
     expect(lastCall().url).toBe(`${BASE}/transfers/tr_1`)
   })
 
-  test('createTransfer → POST /transfers with transfer_quote_id', async () => {
+  test('creates a transfer from a quote id', async () => {
     mockResponse.body = { id: 'tr_new' }
     await resources.createTransfer({ transferQuoteId: 'tq_1', json: true })
     expect(lastCall().method).toBe('POST')
@@ -657,7 +657,7 @@ describe('Transfers', () => {
     expect(lastCall().body).toEqual({ transfer_quote_id: 'tq_1' })
   })
 
-  test('trackTransfer → GET /v1/e/transfers/:id (instance-less)', async () => {
+  test('tracks a transfer via the public endpoint (no instance scope)', async () => {
     mockResponse.body = { id: 'tr_1', status: 'processing' }
     await resources.trackTransfer('tr_1', { json: true })
     expect(lastCall().url).toBe('https://api.blindpay.com/v1/e/transfers/tr_1')
@@ -668,7 +668,7 @@ describe('Transfer Quotes', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('createTransferQuote → POST /transfer-quotes', async () => {
+  test('creates a transfer quote', async () => {
     mockResponse.body = { id: 'tq_new' }
     await resources.createTransferQuote({
       walletId: 'bl_1',
@@ -697,7 +697,7 @@ describe('Transfer Quotes', () => {
     })
   })
 
-  test('createTransferQuote without --cover-fees → body.cover_fees defaults to false', async () => {
+  test('defaults cover_fees to false when --cover-fees is not passed', async () => {
     mockResponse.body = { id: 'tq_new' }
     await resources.createTransferQuote({
       walletId: 'bl_1',
@@ -717,7 +717,7 @@ describe('Fees', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('getInstanceFees → GET /billing/fees', async () => {
+  test('fetches instance fees', async () => {
     mockResponse.body = {}
     await resources.getInstanceFees({ json: true })
     expect(lastCall().url).toBe(`${BASE}/billing/fees`)
@@ -728,7 +728,7 @@ describe('Terms of Service', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('initiateTos → POST /v1/e/instances/{id}/tos', async () => {
+  test('initiates a Terms-of-Service flow and returns a hosted URL', async () => {
     mockResponse.body = { url: 'https://app.blindpay.com/e/terms-of-service?...' }
     await resources.initiateTos({
       idempotencyKey: 'idem-1',
@@ -745,7 +745,7 @@ describe('Terms of Service', () => {
     })
   })
 
-  test('initiateTos without --receiver-id/--redirect-url → body omits both', async () => {
+  test('omits receiver_id and redirect_url from the body when not passed', async () => {
     mockResponse.body = { url: 'https://...' }
     await resources.initiateTos({ idempotencyKey: 'idem-2', json: true })
     expect(lastCall().body).toEqual({ idempotency_key: 'idem-2' })
@@ -756,7 +756,7 @@ describe('Upload', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('uploadFile → POST /v1/upload with FormData carrying `file` and `bucket`', async () => {
+  test('uploads a file as multipart/form-data with file + bucket parts', async () => {
     const tmpPath = await makeTempFile('upload.txt')
 
     mockResponse.body = { file_url: 'https://files.blindpay.com/x.txt' }
@@ -770,7 +770,7 @@ describe('Upload', () => {
     expect(form.get('file')).toBeInstanceOf(Blob)
   })
 
-  test('uploadFile with --instance-id → /v1/upload?instance_id=…', async () => {
+  test('appends ?instance_id=… to the upload URL when --instance-id is passed', async () => {
     const tmpPath = await makeTempFile('upload2.txt')
 
     mockResponse.body = { file_url: 'https://files.blindpay.com/x.txt' }
@@ -784,7 +784,7 @@ describe('Error handling', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('non-2xx response exits with code 2 and surfaces statusCode + message in --json', async () => {
+  test('exits with code 2 and emits a JSON error payload on a non-2xx response', async () => {
     mockResponse = { status: 404, body: { message: 'receiver not found', errors: [] } }
     await expect(resources.getReceiver('re_xyz', { json: true })).rejects.toThrow('__test_exit__2')
     expect(lastJsonLog()).toMatchObject({
@@ -795,7 +795,7 @@ describe('Error handling', () => {
     })
   })
 
-  test('validation errors from the response body are surfaced under validationErrors', async () => {
+  test('surfaces response validation errors under validationErrors', async () => {
     mockResponse = {
       status: 400,
       body: {
@@ -812,7 +812,7 @@ describe('Error handling', () => {
     })
   })
 
-  test('client-side validation failure (missing file) exits with code 1, not 2', async () => {
+  test('exits with code 1 (not 2) when a client-side check fails before any API call', async () => {
     // Code 1 = client-side error (no statusCode); code 2 = API error (has statusCode).
     // Intentionally NOT created — we want uploadFile to discover it's missing.
     const missing = join(tmpdir(), `blindpay-cli-test-${Date.now()}-does-not-exist.bin`)
