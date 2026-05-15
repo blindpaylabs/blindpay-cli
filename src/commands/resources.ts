@@ -839,7 +839,7 @@ export async function getAvailableBankDetails(options: { rail: string, json: boo
   }
 }
 
-// Wallets (custodial — distinct from blockchain_wallets)
+// Wallets (custodial, distinct from blockchain_wallets)
 export async function listWallets(options: { receiverId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
