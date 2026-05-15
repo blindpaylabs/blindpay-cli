@@ -752,7 +752,7 @@ export async function updateInstance(options: {
 export async function getReceiverLimits(receiverId: string, options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const limits = await apiGet(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limits`)
+    const limits = await apiGet(ctx, `${instancePath(ctx)}/limits/receivers/${receiverId}`)
     printResult(limits, options.json)
   }
   catch (e) {
@@ -763,9 +763,38 @@ export async function getReceiverLimits(receiverId: string, options: { json: boo
 export async function getReceiverLimitsIncreaseRequests(receiverId: string, options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limits-increase-requests`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limit-increase`)
     const list = extractList(res)
-    printResult(list, options.json)
+    printResult(list, options.json, ['id', 'status', 'per_transaction', 'daily', 'monthly', 'created_at'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function createReceiverLimitIncrease(
+  receiverId: string,
+  options: {
+    perTransaction: string
+    daily: string
+    monthly: string
+    supportingDocumentType: string
+    supportingDocumentFile: string
+    json: boolean
+  },
+) {
+  try {
+    const ctx = resolveContext()
+    const body = {
+      per_transaction: parseAmount(options.perTransaction, 0, options.json),
+      daily: parseAmount(options.daily, 0, options.json),
+      monthly: parseAmount(options.monthly, 0, options.json),
+      supporting_document_type: options.supportingDocumentType,
+      supporting_document_file: options.supportingDocumentFile,
+    }
+    const res = await apiPost<{ id: string }>(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limit-increase`, body)
+    clack.log.success(`Created limit increase request ${res.id}`)
+    printResult(res, options.json)
   }
   catch (e) {
     handleApiError(e, options.json)
@@ -806,6 +835,214 @@ export async function getAvailableBankDetails(options: { rail: string, json: boo
     const ctx = resolveContext()
     const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/available/bank-details/${options.rail}`)
     printResult(res, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Wallets (custodial, distinct from blockchain_wallets)
+export async function listWallets(options: { receiverId: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets`)
+    const list = extractList(res)
+    printResult(list, options.json, ['id', 'name', 'network', 'address'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function getWallet(id: string, options: { receiverId: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const wallet = await apiGet(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets/${id}`)
+    printResult(wallet, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function getWalletBalance(id: string, options: { receiverId: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const balance = await apiGet(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets/${id}/balance`)
+    printResult(balance, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function createWallet(options: {
+  receiverId: string
+  network: string
+  name: string
+  externalId?: string
+  json: boolean
+}) {
+  try {
+    const ctx = resolveContext()
+    const body: Record<string, any> = {
+      network: options.network,
+      name: options.name,
+    }
+    if (options.externalId !== undefined) body.external_id = options.externalId
+    const wallet = await apiPost<{ id: string, network: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets`, body)
+    clack.log.success(`Created wallet ${wallet.id} (${wallet.network})`)
+    printResult(wallet, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function deleteWallet(id: string, options: { receiverId: string, json?: boolean }) {
+  try {
+    const ctx = resolveContext()
+    await apiDelete(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets/${id}`)
+    clack.log.success(`Deleted wallet ${id}`)
+  }
+  catch (e) {
+    handleApiError(e, options.json ?? false)
+  }
+}
+
+// Transfers
+export async function listTransfers(options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/transfers`)
+    const list = extractList(res)
+    printResult(list, options.json, ['id', 'status', 'sender_amount', 'receiver_amount', 'created_at'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function getTransfer(id: string, options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const transfer = await apiGet(ctx, `${instancePath(ctx)}/transfers/${id}`)
+    printResult(transfer, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function createTransfer(options: { transferQuoteId: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const body = { transfer_quote_id: options.transferQuoteId }
+    const transfer = await apiPost<{ id: string }>(ctx, `${instancePath(ctx)}/transfers`, body)
+    clack.log.success(`Created transfer ${transfer.id}`)
+    printResult(transfer, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function trackTransfer(id: string, options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiGet(ctx, `/v1/e/transfers/${id}`)
+    printResult(res, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Transfer Quotes
+export async function createTransferQuote(options: {
+  walletId: string
+  senderToken: string
+  receiverWalletAddress: string
+  receiverToken: string
+  receiverNetwork: string
+  requestAmount: string
+  amountReference: string
+  coverFees?: boolean
+  partnerFeeId?: string
+  json: boolean
+}) {
+  try {
+    const ctx = resolveContext()
+    const body: Record<string, any> = {
+      wallet_id: options.walletId,
+      sender_token: options.senderToken,
+      receiver_wallet_address: options.receiverWalletAddress,
+      receiver_token: options.receiverToken,
+      receiver_network: options.receiverNetwork,
+      request_amount: parseAmount(options.requestAmount, 0, options.json),
+      amount_reference: options.amountReference,
+      cover_fees: options.coverFees ?? false,
+    }
+    if (options.partnerFeeId !== undefined) body.partner_fee_id = options.partnerFeeId
+    const quote = await apiPost<{ id: string }>(ctx, `${instancePath(ctx)}/transfer-quotes`, body)
+    clack.log.success(`Created transfer quote ${quote.id}`)
+    printResult(quote, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Fees
+export async function getInstanceFees(options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const fees = await apiGet(ctx, `${instancePath(ctx)}/billing/fees`)
+    printResult(fees, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Terms of Service
+export async function initiateTos(options: { idempotencyKey: string, receiverId?: string, redirectUrl?: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const body: Record<string, any> = { idempotency_key: options.idempotencyKey }
+    if (options.receiverId !== undefined) body.receiver_id = options.receiverId
+    if (options.redirectUrl !== undefined) body.redirect_url = options.redirectUrl
+    const res = await apiPost<{ url: string }>(ctx, `/v1/e/instances/${ctx.instanceId}/tos`, body)
+    if (!options.json) clack.log.success(`Open this URL to accept the Terms of Service:\n${res.url}`)
+    printResult(res, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Upload
+export async function uploadFile(options: { file: string, bucket: string, instanceId?: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const fileHandle = Bun.file(options.file)
+    if (!await fileHandle.exists())
+      exitWithError(`File not found: ${options.file}`, 1, options.json)
+
+    const form = new FormData()
+    form.append('file', fileHandle as unknown as Blob, options.file.split('/').pop())
+    form.append('bucket', options.bucket)
+
+    const params = options.instanceId ? `?instance_id=${encodeURIComponent(options.instanceId)}` : ''
+    const url = `${ctx.baseUrl}/v1/upload${params}`
+    const res = await fetch(url, { method: 'POST', body: form })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`Upload failed (${res.status}): ${text || res.statusText}`)
+    }
+    const body = await res.json() as { file_url: string }
+    if (!options.json) clack.log.success(`Uploaded: ${body.file_url}`)
+    printResult(body, options.json)
   }
   catch (e) {
     handleApiError(e, options.json)
