@@ -1,4 +1,6 @@
-export const CLI_VERSION = '0.1.1'
+import pkg from '../../package.json'
+
+export const CLI_VERSION = pkg.version
 export const DEFAULT_API_URL = 'https://api.blindpay.com'
 
 export const bankDetailFields: Record<string, string[]> = {
