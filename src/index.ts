@@ -58,6 +58,8 @@ import {
   getInstanceFees,
   initiateTos,
   uploadFile,
+  getReceiverRfi,
+  submitReceiverRfi,
 } from './commands/resources'
 import { getConfig, setConfig, clearConfig, getConfigPath } from './utils/config'
 import { CLI_VERSION } from './utils/constants'
@@ -216,6 +218,19 @@ receivers
   .requiredOption('--supporting-document-file <url>', 'Supporting document URL (upload via `blindpay upload` first)')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => createReceiverLimitIncrease(id, opts))
+
+receivers
+  .command('rfi <id>')
+  .description('Get the open RFI (Request for Information) for a receiver')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => getReceiverRfi(id, opts))
+
+receivers
+  .command('submit_rfi <id>')
+  // TODO(api-sync): Add --response flag(s) once the POST /receivers/{id}/rfi request body schema is known.
+  .description('Submit an RFI response for a receiver')
+  .option('--json', 'Output as JSON', false)
+  .action((id, opts) => submitReceiverRfi(id, opts))
 
 // ── Bank Accounts ───────────────────────────────────────────────────────
 const bankAccounts = program.command('bank_accounts').description('Manage bank accounts')

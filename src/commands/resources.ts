@@ -993,6 +993,33 @@ export async function createTransferQuote(options: {
   }
 }
 
+// RFI (Request for Information)
+export async function getReceiverRfi(receiverId: string, options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const rfi = await apiGet(ctx, `${instancePath(ctx)}/receivers/${receiverId}/rfi`)
+    printResult(rfi, options.json, ['id', 'status', 'receiver_type', 'expires_at', 'submitted_at'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// TODO(api-sync): The POST /receivers/{id}/rfi request body schema is not described in the
+// changelog. Add flag(s) for the response payload once the schema is known.
+export async function submitReceiverRfi(receiverId: string, options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiPost<{ success: boolean }>(ctx, `${instancePath(ctx)}/receivers/${receiverId}/rfi`, {})
+    clack.log.success(`RFI response submitted`)
+    if (options.json)
+      console.log(formatOutput(res, true))
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
 // Fees
 export async function getInstanceFees(options: { json: boolean }) {
   try {

@@ -713,6 +713,25 @@ describe('Transfer Quotes', () => {
   })
 })
 
+describe('RFI', () => {
+  beforeEach(setupTestEnv)
+  afterEach(teardownTestEnv)
+
+  test('fetches the open RFI for a receiver', async () => {
+    mockResponse.body = { id: 'rfi_1', status: 'pending', receiver_type: 'individual' }
+    await resources.getReceiverRfi('re_xyz', { json: true })
+    expect(lastCall().method).toBe('GET')
+    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/rfi`)
+  })
+
+  test('submits an RFI response for a receiver', async () => {
+    mockResponse.body = { success: true }
+    await resources.submitReceiverRfi('re_xyz', { json: true })
+    expect(lastCall().method).toBe('POST')
+    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/rfi`)
+  })
+})
+
 describe('Fees', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
