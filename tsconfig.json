@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
-    "rootDir": "./src",
     "module": "ES2022",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
@@ -16,6 +15,6 @@
     "isolatedModules": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "package.json"],
   "exclude": ["node_modules", "dist"]
 }

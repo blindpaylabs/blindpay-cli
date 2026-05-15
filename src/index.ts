@@ -230,6 +230,7 @@ bankAccounts
   .option('--pix-key <key>', 'PIX key')
   .option('--recipient-relationship <rel>', 'Recipient relationship')
   .option('--country <country>', 'Country code')
+  .option('--swift-ifsc-branch-code <code>', 'SWIFT/IFSC branch code (international_swift accounts)')
   .option('--json', 'Output as JSON', false)
   .action(opts => createBankAccount(opts))
 
