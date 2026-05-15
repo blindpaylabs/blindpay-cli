@@ -253,6 +253,7 @@ export async function createBankAccount(options: {
   accountType?: string
   accountClass?: string
   country?: string
+  swiftIfscBranchCode?: string
   json: boolean
 }) {
   try {
@@ -268,6 +269,7 @@ export async function createBankAccount(options: {
       account_type: options.accountType ?? null,
       account_class: options.accountClass ?? null,
       country: options.country ?? null,
+      swift_ifsc_branch_code: options.swiftIfscBranchCode ?? null,
     }
     const ba = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts`, body)
     clack.log.success(`Created bank account ${ba.id} (${ba.type})`)
