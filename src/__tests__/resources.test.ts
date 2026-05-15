@@ -288,6 +288,18 @@ describe('Payouts', () => {
     expect(lastCall().url).toBe(`${BASE}/payouts/evm`)
     expect(lastCall().body).toEqual({ quote_id: 'qu_1', sender_wallet_address: '0xabc' })
   })
+
+  test('createPayout with --network solana → /payouts/solana', async () => {
+    mockResponse.body = { id: 'po_new' }
+    await resources.createPayout({ quoteId: 'qu_1', network: 'solana', senderWalletAddress: 'sol_addr', json: true })
+    expect(lastCall().url).toBe(`${BASE}/payouts/solana`)
+  })
+
+  test('createPayout with --network stellar → /payouts/stellar', async () => {
+    mockResponse.body = { id: 'po_new' }
+    await resources.createPayout({ quoteId: 'qu_1', network: 'stellar', senderWalletAddress: 'G...', json: true })
+    expect(lastCall().url).toBe(`${BASE}/payouts/stellar`)
+  })
 })
 
 describe('Payins', () => {
