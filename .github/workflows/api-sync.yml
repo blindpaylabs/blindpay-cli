@@ -84,14 +84,21 @@ jobs:
                    pass through to the action in src/commands/resources.ts.
                  - Removed endpoints: remove the command and the action.
                  - Enum changes: only update help text in src/index.ts.
-            5. Bump the `version` field in package.json (patch for
+            5. Update src/__tests__/resources.test.ts to match. For every
+               action you added: add at least one happy-path test
+               asserting the URL, method, and body. For every action you
+               modified: update the existing test's expected body/URL.
+               For every action you removed: remove its test. Follow the
+               existing pattern (setupTestEnv/teardownTestEnv, lastCall(),
+               mockResponse.body). See the "Testing" section of CLAUDE.md.
+            6. Bump the `version` field in package.json (patch for
                additive changes, minor if anything was removed).
                CLI_VERSION is derived from package.json at build time —
                do not edit src/utils/constants.ts for version bumps.
-            6. Run `bun run typecheck`, `bun run lint:fix`, and
+            7. Run `bun run typecheck`, `bun run lint:fix`, and
                `bun run test`. Fix any errors until all three are clean.
-            7. Do NOT touch .github/workflows/.
-            8. Do NOT create commits — leave changes in the working tree.
+            8. Do NOT touch .github/workflows/.
+            9. Do NOT create commits — leave changes in the working tree.
 
             If a change is ambiguous, leave a TODO comment with
             `// TODO(api-sync):` so a human reviewer can address it.

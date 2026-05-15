@@ -10,6 +10,7 @@ interface FetchCall {
 }
 
 let fetchCalls: FetchCall[] = []
+let consoleLogs: string[] = []
 let mockResponse: { status: number, body: unknown, contentType?: string | null } = { status: 200, body: {} }
 let originalFetch: typeof globalThis.fetch
 let originalExit: typeof process.exit
@@ -27,7 +28,10 @@ function setupTestEnv() {
   delete process.env.BLINDPAY_API_URL
   process.env.XDG_CONFIG_HOME = `/tmp/blindpay-cli-test-${Date.now()}`
 
-  consoleSpy = spyOn(console, 'log').mockImplementation(() => {})
+  consoleLogs = []
+  consoleSpy = spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+    consoleLogs.push(args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' '))
+  })
 
   originalFetch = globalThis.fetch
   fetchCalls = []
@@ -76,6 +80,19 @@ function teardownTestEnv() {
 function lastCall(): FetchCall {
   if (fetchCalls.length === 0) throw new Error('fetch was not called')
   return fetchCalls[fetchCalls.length - 1]!
+}
+
+// Returns the last JSON object printed via console.log, parsed.
+// Useful for asserting the shape of `--json` output (success or error).
+function lastJsonLog(): Record<string, unknown> {
+  for (let i = consoleLogs.length - 1; i >= 0; i--) {
+    const line = consoleLogs[i]!
+    if (line.startsWith('{') || line.startsWith('[')) {
+      try { return JSON.parse(line) as Record<string, unknown> }
+      catch { /* not JSON, keep looking */ }
+    }
+  }
+  throw new Error(`no JSON output found in console.log; logs were: ${JSON.stringify(consoleLogs)}`)
 }
 
 const BASE = 'https://api.blindpay.com/v1/instances/in_testInstance'
@@ -692,8 +709,7 @@ describe('Upload', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('uploadFile → POST /v1/upload with multipart form-data', async () => {
-    // Write a small fixture file we can upload
+  test('uploadFile → POST /v1/upload with FormData carrying `file` and `bucket`', async () => {
     const tmpPath = `/tmp/blindpay-cli-upload-test-${Date.now()}.txt`
     await Bun.write(tmpPath, 'hello')
 
@@ -702,8 +718,11 @@ describe('Upload', () => {
 
     expect(lastCall().method).toBe('POST')
     expect(lastCall().url).toBe('https://api.blindpay.com/v1/upload')
-    // Body is a FormData instance, not stringified JSON
-    expect(typeof lastCall().body).toBe('object')
+    expect(lastCall().body).toBeInstanceOf(FormData)
+    const form = lastCall().body as FormData
+    expect(form.get('bucket')).toBe('limit_increase')
+    const filePart = form.get('file')
+    expect(filePart).toBeInstanceOf(Blob)
   })
 
   test('uploadFile with instanceId → appends ?instance_id= query param', async () => {
@@ -715,28 +734,44 @@ describe('Upload', () => {
 
     expect(lastCall().url).toBe('https://api.blindpay.com/v1/upload?instance_id=in_override')
   })
-
-  test('uploadFile with missing file → exits with code 1', async () => {
-    await expect(
-      resources.uploadFile({ file: '/tmp/does-not-exist-blindpay-test.bin', bucket: 'avatar', json: true }),
-    ).rejects.toThrow('__test_exit__1')
-  })
 })
 
 describe('Error handling', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('non-2xx response on GET surfaces as a handled exit (not an unhandled throw)', async () => {
-    mockResponse = { status: 404, body: { message: 'not found', errors: [] } }
-    await expect(resources.getReceiver('re_xyz', { json: true })).rejects.toThrow(/__test_exit__/)
+  test('non-2xx response exits with code 2 and surfaces statusCode + message in --json', async () => {
+    mockResponse = { status: 404, body: { message: 'receiver not found', errors: [] } }
+    await expect(resources.getReceiver('re_xyz', { json: true })).rejects.toThrow('__test_exit__2')
+    expect(lastJsonLog()).toMatchObject({
+      error: true,
+      exitCode: 2,
+      statusCode: 404,
+      message: 'receiver not found',
+    })
   })
 
-  test('validation errors are picked up from response body', async () => {
+  test('validation errors from the response body are surfaced under validationErrors', async () => {
     mockResponse = {
       status: 400,
-      body: { message: 'invalid', errors: [{ path: ['email'], message: 'required' }] },
+      body: {
+        message: 'invalid request',
+        errors: [{ path: ['email'], message: 'required' }],
+      },
     }
-    await expect(resources.createReceiver({ email: 'x', json: true })).rejects.toThrow(/__test_exit__/)
+    await expect(resources.createReceiver({ email: 'x', json: true })).rejects.toThrow('__test_exit__2')
+    expect(lastJsonLog()).toMatchObject({
+      error: true,
+      exitCode: 2,
+      statusCode: 400,
+      validationErrors: [{ path: ['email'], message: 'required' }],
+    })
+  })
+
+  test('client-side validation failure (missing file) exits with code 1, not 2', async () => {
+    // Code 1 = client-side error (no statusCode); code 2 = API error (has statusCode).
+    await expect(
+      resources.uploadFile({ file: '/tmp/blindpay-test-does-not-exist.bin', bucket: 'avatar', json: true }),
+    ).rejects.toThrow('__test_exit__1')
   })
 })

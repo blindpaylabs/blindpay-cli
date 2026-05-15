@@ -45,7 +45,16 @@ src/
     config.ts                   # ~/.config/blindpay/config.json read/write.
     output.ts                   # formatOutput(data, json, columns?) for
                                 # table vs JSON rendering.
-    constants.ts                # CLI_VERSION, DEFAULT_API_URL.
+    constants.ts                # CLI_VERSION (derived from package.json),
+                                # DEFAULT_API_URL.
+  __tests__/                    # bun test suites
+    api-client.test.ts          # resolveContext + env-var handling
+    config.test.ts              # ~/.config read/write
+    output.test.ts              # formatTable/formatJson/truncate
+    resources.test.ts           # one happy-path test per action in
+                                # commands/resources.ts. fetch is mocked
+                                # via globalThis.fetch + URL/method/body
+                                # assertions.
 ```
 
 ## Conventions
@@ -70,6 +79,12 @@ src/
    `handleApiError(err, json)`.
 6. Use `parseAmount(...)` (already in resources.ts) for any amount field
    to enforce non-negative integers (cents).
+7. Add a test for the new action in `src/__tests__/resources.test.ts`,
+   matching the existing pattern: set `mockResponse.body`, call the
+   action, then assert `lastCall().method`, `lastCall().url`, and
+   `lastCall().body`. One happy-path test per action is the minimum;
+   include an extra test for any non-trivial body shaping
+   (e.g. cents-scaling, optional-field omission, network-path branching).
 
 ### Naming
 
@@ -107,6 +122,22 @@ explicitly opts in via `--interactive` or similar.
 `oxlint` enforces formatting and lint. Run `bun run lint:fix` after
 edits and ensure `bun run typecheck` is clean before opening a PR.
 
+### Testing
+
+Tests live in `src/__tests__/` and run via `bun test`. The action
+functions in `commands/resources.ts` are tested in `resources.test.ts`
+by stubbing `globalThis.fetch` and asserting the request the action
+constructs. The helpers `setupTestEnv` / `teardownTestEnv` at the top
+of that file install the stubs in `beforeEach`/`afterEach`; reuse them
+when adding tests. Don't introduce a real network or filesystem
+dependency.
+
+Required state per test: set `mockResponse = { status, body }` for the
+fetch return value, call the action, then read `lastCall()` for the
+recorded `url`/`method`/`body`. Error-path tests assert that the action
+throws `__test_exit__<code>` (the stubbed `process.exit` re-throws so
+the test runner sees the exit code).
+
 ## Sync workflow conventions
 
 When responding to an api-sync event:
@@ -124,11 +155,17 @@ When responding to an api-sync event:
    - **Removed endpoint/field** → Remove the corresponding command/flag.
    - **Enum value added** → Update help text only (CLI doesn't validate
      enum values client-side).
-3. Bump CLI version in `src/utils/constants.ts` (`CLI_VERSION`) — patch
-   for additive changes, minor if you removed anything.
-4. Run `bun run typecheck`, `bun run lint:fix`, and `bun run test`. Fix any errors.
-5. Do NOT touch `.github/workflows/`.
-6. Do NOT create commits — leave changes in the working tree.
+3. Add or update tests in `src/__tests__/resources.test.ts` for every
+   action you added or modified. New action → new happy-path test
+   (URL + method + body). Modified body shape → update the matching
+   test's expected body. Removed action → remove its test. See the
+   "Testing" section above for the helper pattern.
+4. Bump the `version` field in `package.json` — patch for additive
+   changes, minor if you removed anything. `CLI_VERSION` is derived
+   from `package.json` at build time; don't edit `constants.ts`.
+5. Run `bun run typecheck`, `bun run lint:fix`, and `bun run test`. Fix any errors.
+6. Do NOT touch `.github/workflows/`.
+7. Do NOT create commits — leave changes in the working tree.
 
 If a change in the changelog doesn't map to any CLI surface (e.g. a
 schema-only change with no field added), skip it silently.
