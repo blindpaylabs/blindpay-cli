@@ -84,6 +84,19 @@ jobs:
                    pass through to the action in src/commands/resources.ts.
                  - Removed endpoints: remove the command and the action.
                  - Enum changes: only update help text in src/index.ts.
+                 - Dynamic / arbitrary-object request bodies (e.g.
+                   `Record<string, any>` or `z.record(z.string(),
+                   z.any())`): do NOT ship the command with an empty
+                   `{}` body and a TODO. Accept the body as a single
+                   JSON-string flag (`--response <json>`, `--body <json>`,
+                   etc.), parse with `JSON.parse`, and call
+                   `exitWithError` on a parse failure. See the
+                   "Dynamic request bodies" section in CLAUDE.md for the
+                   exact pattern.
+                 - Do NOT leave `// TODO(api-sync):` markers in shipped
+                   commands. Use the JSON-string fallback above instead
+                   of TODOs. TODOs are only acceptable for low-signal
+                   cleanups (e.g. column tuning).
             5. Update src/__tests__/resources.test.ts to match. For every
                action you added: add at least one happy-path test
                asserting the URL, method, and body. For every action you
@@ -91,6 +104,12 @@ jobs:
                For every action you removed: remove its test. Follow the
                existing pattern (setupTestEnv/teardownTestEnv, lastCall(),
                mockResponse.body). See the "Testing" section of CLAUDE.md.
+               **Place new tests inside the existing `describe(...)`
+               block that matches the command's top-level CLI group** —
+               a `receivers submit_rfi` test goes in
+               `describe('Receivers', ...)`, not in a new
+               `describe('RFI', ...)`. Only create a new describe block
+               when introducing a brand-new top-level CLI group.
             6. Bump the `version` field in package.json (patch for
                additive changes, minor if anything was removed).
                CLI_VERSION is derived from package.json at build time —
