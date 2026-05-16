@@ -85,6 +85,13 @@ src/
    `lastCall().body`. One happy-path test per action is the minimum;
    include an extra test for any non-trivial body shaping
    (e.g. cents-scaling, optional-field omission, network-path branching).
+   **Place the test inside the existing `describe(...)` block that
+   matches the command's top-level CLI group.** A `receivers submit_rfi`
+   command's test goes inside `describe('Receivers', ...)` alongside
+   `lists receivers` / `fetches a receiver by id` — not in a new
+   `describe('RFI', ...)`. Only create a new describe block when you are
+   introducing a brand-new top-level group (e.g. the first `transfers`
+   command).
 
 ### Naming
 
@@ -116,6 +123,53 @@ failures (bad CLI flags etc).
 We do not use interactive prompts for CLI commands today — every input
 is a flag. Don't introduce `clack.prompt` mid-command unless the user
 explicitly opts in via `--interactive` or similar.
+
+### Dynamic request bodies
+
+When an endpoint accepts an arbitrary object body (e.g. the OpenAPI
+schema is `z.record(z.string(), z.any())` or `Record<string, unknown>`),
+do **not** ship a command with an empty `{}` body and a TODO. Accept
+the body as a single `--body <json>` flag and parse it. Pattern:
+
+```ts
+export async function submitReceiverRfi(
+  receiverId: string,
+  options: { body: string; json: boolean },
+) {
+  let body: Record<string, unknown>
+  try { body = JSON.parse(options.body) }
+  catch (e) {
+    exitWithError(`Invalid --body JSON: ${(e as Error).message}`, 1, options.json)
+  }
+  try {
+    const ctx = resolveContext()
+    const res = await apiPost<{ success: boolean }>(
+      ctx,
+      `${instancePath(ctx)}/receivers/${receiverId}/rfi`,
+      body,
+    )
+    clack.log.success('RFI response submitted')
+    if (options.json) console.log(formatOutput(res, true))
+  }
+  catch (e) { handleApiError(e, options.json) }
+}
+```
+
+The user constructs the body shape on the command line:
+`blindpay receivers submit_rfi re_xyz --body '{"address":"..."}'`.
+
+Use `--body` as the standard flag name for all dynamic-body endpoints.
+Don't pick a semantically-flavored name like `--response` or
+`--payload` — `--body` is consistent across commands and matches what
+the value actually is (the HTTP request body, verbatim).
+
+### No TODO markers in shipped commands
+
+Don't leave `// TODO(api-sync):` markers in commands you ship. If you
+can't figure out a sensible flag shape, fall back to the JSON-string
+pattern above. TODOs are only acceptable for low-signal cleanups
+(e.g. column tuning) — never for command behavior that would otherwise
+be broken or unusable.
 
 ### Linting
 
