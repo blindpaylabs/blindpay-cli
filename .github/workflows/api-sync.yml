@@ -88,11 +88,12 @@ jobs:
                    `Record<string, any>` or `z.record(z.string(),
                    z.any())`): do NOT ship the command with an empty
                    `{}` body and a TODO. Accept the body as a single
-                   JSON-string flag (`--response <json>`, `--body <json>`,
-                   etc.), parse with `JSON.parse`, and call
-                   `exitWithError` on a parse failure. See the
-                   "Dynamic request bodies" section in CLAUDE.md for the
-                   exact pattern.
+                   `--body <json>` flag, parse with `JSON.parse`, and
+                   call `exitWithError` on a parse failure. Use
+                   `--body` (not `--response`, `--payload`, etc.) for
+                   consistency across commands. See the
+                   "Dynamic request bodies" section in CLAUDE.md for
+                   the exact pattern.
                  - Do NOT leave `// TODO(api-sync):` markers in shipped
                    commands. Use the JSON-string fallback above instead
                    of TODOs. TODOs are only acceptable for low-signal

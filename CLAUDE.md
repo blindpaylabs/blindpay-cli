@@ -129,17 +129,17 @@ explicitly opts in via `--interactive` or similar.
 When an endpoint accepts an arbitrary object body (e.g. the OpenAPI
 schema is `z.record(z.string(), z.any())` or `Record<string, unknown>`),
 do **not** ship a command with an empty `{}` body and a TODO. Accept
-the body as a single JSON-string flag and parse it. Pattern:
+the body as a single `--body <json>` flag and parse it. Pattern:
 
 ```ts
 export async function submitReceiverRfi(
   receiverId: string,
-  options: { response: string; json: boolean },
+  options: { body: string; json: boolean },
 ) {
   let body: Record<string, unknown>
-  try { body = JSON.parse(options.response) }
+  try { body = JSON.parse(options.body) }
   catch (e) {
-    exitWithError(`Invalid --response JSON: ${(e as Error).message}`, 1, options.json)
+    exitWithError(`Invalid --body JSON: ${(e as Error).message}`, 1, options.json)
   }
   try {
     const ctx = resolveContext()
@@ -156,7 +156,12 @@ export async function submitReceiverRfi(
 ```
 
 The user constructs the body shape on the command line:
-`blindpay receivers submit_rfi re_xyz --response '{"address":"..."}'`.
+`blindpay receivers submit_rfi re_xyz --body '{"address":"..."}'`.
+
+Use `--body` as the standard flag name for all dynamic-body endpoints.
+Don't pick a semantically-flavored name like `--response` or
+`--payload` — `--body` is consistent across commands and matches what
+the value actually is (the HTTP request body, verbatim).
 
 ### No TODO markers in shipped commands
 
