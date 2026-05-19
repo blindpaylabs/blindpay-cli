@@ -216,6 +216,40 @@ export async function deleteReceiver(id: string, options: { json?: boolean } = {
   }
 }
 
+// RFI
+export async function getReceiverRfi(receiverId: string, options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const rfi = await apiGet(ctx, `${instancePath(ctx)}/receivers/${receiverId}/rfi`)
+    printResult(rfi, options.json, ['id', 'status', 'receiver_id', 'expires_at', 'submitted_at'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function submitReceiverRfi(
+  receiverId: string,
+  options: { body: string; json: boolean },
+) {
+  let body: Record<string, unknown>
+  try { body = JSON.parse(options.body) }
+  catch (e) {
+    exitWithError(`Invalid --body JSON: ${(e as Error).message}`, 1, options.json)
+  }
+  try {
+    const ctx = resolveContext()
+    const res = await apiPost<{ success: boolean }>(
+      ctx,
+      `${instancePath(ctx)}/receivers/${receiverId}/rfi`,
+      body,
+    )
+    clack.log.success('RFI response submitted')
+    if (options.json) console.log(formatOutput(res, true))
+  }
+  catch (e) { handleApiError(e, options.json) }
+}
+
 // Bank Accounts
 export async function listBankAccounts(options: { receiverId: string, json: boolean }) {
   try {

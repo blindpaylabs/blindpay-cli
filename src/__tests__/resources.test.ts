@@ -175,6 +175,27 @@ describe('Receivers', () => {
     expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/limit-increase`)
   })
 
+  test('gets the open RFI for a receiver', async () => {
+    mockResponse.body = { id: 'rfi_1', status: 'pending', receiver_id: 're_xyz' }
+    await resources.getReceiverRfi('re_xyz', { json: true })
+    expect(lastCall().method).toBe('GET')
+    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/rfi`)
+  })
+
+  test('submits an RFI response for a receiver', async () => {
+    mockResponse.body = { success: true }
+    await resources.submitReceiverRfi('re_xyz', { body: '{"address":"123 Main St"}', json: true })
+    expect(lastCall().method).toBe('POST')
+    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/rfi`)
+    expect(lastCall().body).toEqual({ address: '123 Main St' })
+  })
+
+  test('exits with code 1 when --body is not valid JSON', async () => {
+    await expect(
+      resources.submitReceiverRfi('re_xyz', { body: 'not-json', json: true }),
+    ).rejects.toThrow('__test_exit__1')
+  })
+
   test('creates a limit-increase request with monetary fields parsed as integers', async () => {
     mockResponse.body = { id: 'rl_new' }
     await resources.createReceiverLimitIncrease('re_xyz', {

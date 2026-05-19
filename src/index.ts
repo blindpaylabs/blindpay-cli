@@ -8,6 +8,8 @@ import {
   createReceiver,
   updateReceiver,
   deleteReceiver,
+  getReceiverRfi,
+  submitReceiverRfi,
   getReceiverLimits,
   getReceiverLimitsIncreaseRequests,
   listBankAccounts,
@@ -193,6 +195,19 @@ receivers
   .description('Delete a receiver')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => deleteReceiver(id, opts))
+
+receivers
+  .command('get_rfi <receiver-id>')
+  .description('Get the open RFI for a receiver')
+  .option('--json', 'Output as JSON', false)
+  .action((receiverId, opts) => getReceiverRfi(receiverId, opts))
+
+receivers
+  .command('submit_rfi <receiver-id>')
+  .description('Submit an RFI response for a receiver')
+  .requiredOption('--body <json>', 'RFI response as a JSON string')
+  .option('--json', 'Output as JSON', false)
+  .action((receiverId, opts) => submitReceiverRfi(receiverId, opts))
 
 receivers
   .command('limits <id>')
