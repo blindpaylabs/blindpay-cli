@@ -750,7 +750,7 @@ export async function updateInstance(options: {
 export async function getCustomerLimits(customerId: string, options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const limits = await apiGet(ctx, `${instancePath(ctx)}/customers/${customerId}/limits`)
+    const limits = await apiGet(ctx, `${instancePath(ctx)}/limits/customers/${customerId}`)
     printResult(limits, options.json)
   }
   catch (e) {
@@ -761,7 +761,7 @@ export async function getCustomerLimits(customerId: string, options: { json: boo
 export async function getCustomerLimitIncreaseRequests(customerId: string, options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${customerId}/limits-increase-requests`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${customerId}/limit-increase`)
     const list = extractList(res)
     printResult(list, options.json)
   }
