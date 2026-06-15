@@ -19,12 +19,12 @@ interface ResourceSchema {
 
 const schemas: ResourceSchema[] = [
   {
-    resource: 'receivers',
+    resource: 'customers',
     commands: ['list', 'get', 'create', 'update', 'delete'],
     create: {
       fields: [
-        { name: 'email', type: 'string', required: true, description: 'Receiver email address' },
-        { name: 'type', type: 'string', required: false, description: 'Receiver type', default: 'individual', enum: ['individual', 'business'] },
+        { name: 'email', type: 'string', required: true, description: 'Customer email address' },
+        { name: 'type', type: 'string', required: false, description: 'Customer type', default: 'individual', enum: ['individual', 'business'] },
         { name: 'name', type: 'string', required: false, description: 'Full name (individual); auto-splits into first_name and last_name' },
         { name: 'first_name', type: 'string', required: false, description: 'First name (individual)' },
         { name: 'last_name', type: 'string', required: false, description: 'Last name (individual)' },
@@ -41,7 +41,7 @@ const schemas: ResourceSchema[] = [
         { name: 'first_name', type: 'string', required: false, description: 'First name (individual)' },
         { name: 'last_name', type: 'string', required: false, description: 'Last name (individual)' },
         { name: 'legal_name', type: 'string', required: false, description: 'Legal name (business)' },
-        { name: 'email', type: 'string', required: false, description: 'Receiver email address' },
+        { name: 'email', type: 'string', required: false, description: 'Customer email address' },
         { name: 'country', type: 'string', required: false, description: 'ISO 3166 country code' },
         { name: 'kyc_status', type: 'string', required: false, description: 'KYC verification status', enum: ['verifying', 'approved', 'rejected', 'deprecated'] },
       ],
@@ -52,7 +52,7 @@ const schemas: ResourceSchema[] = [
     commands: ['list', 'get', 'create', 'delete'],
     create: {
       fields: [
-        { name: 'receiver_id', type: 'string', required: true, description: 'Receiver ID that owns this bank account' },
+        { name: 'customer_id', type: 'string', required: true, description: 'Customer ID that owns this bank account' },
         { name: 'type', type: 'string', required: false, description: 'Bank account type / payment rail', default: 'ach', enum: Object.keys(bankDetailFields) },
         { name: 'name', type: 'string', required: false, description: 'Account display name', default: 'CLI Bank Account' },
         { name: 'beneficiary_name', type: 'string', required: false, description: 'Beneficiary name on the account' },
@@ -71,7 +71,7 @@ const schemas: ResourceSchema[] = [
     commands: ['list', 'get', 'create', 'delete'],
     create: {
       fields: [
-        { name: 'receiver_id', type: 'string', required: true, description: 'Receiver ID that owns this wallet' },
+        { name: 'customer_id', type: 'string', required: true, description: 'Customer ID that owns this wallet' },
         { name: 'address', type: 'string', required: true, description: 'Blockchain wallet address' },
         { name: 'network', type: 'string', required: false, description: 'Blockchain network', default: 'base', enum: ['base', 'ethereum', 'polygon', 'solana', 'stellar', 'arbitrum', 'optimism'] },
         { name: 'external_id', type: 'string', required: false, description: 'External reference ID' },
@@ -162,7 +162,7 @@ const schemas: ResourceSchema[] = [
     commands: ['list', 'create'],
     create: {
       fields: [
-        { name: 'receiver_id', type: 'string', required: true, description: 'Receiver ID' },
+        { name: 'customer_id', type: 'string', required: true, description: 'Customer ID' },
         { name: 'blockchain_wallet_id', type: 'string', required: true, description: 'Blockchain wallet ID' },
       ],
     },

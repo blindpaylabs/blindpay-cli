@@ -9,7 +9,8 @@ import {
   updateCustomer,
   deleteCustomer,
   getCustomerLimits,
-  getCustomerLimitsIncreaseRequests,
+  getCustomerLimitIncreaseRequests,
+  createCustomerLimitIncrease,
   listBankAccounts,
   getBankAccount,
   createBankAccount,
@@ -44,7 +45,6 @@ import {
   updateInstance,
   listAvailableRails,
   getAvailableBankDetails,
-  createReceiverLimitIncrease,
   listWallets,
   getWallet,
   getWalletBalance,
@@ -135,7 +135,7 @@ configCmd
   .description('Print config file path')
   .action(() => console.log(getConfigPath()))
 
-// ── Receivers ───────────────────────────────────────────────────────────
+// ── Customers ───────────────────────────────────────────────────────────
 const customers = program.command('customers').description('Manage customers')
   .addHelpText('after', `
 Examples:
@@ -157,7 +157,7 @@ customers
   .command('get <id>')
   .description('Get a customer by ID')
   .option('--json', 'Output as JSON', false)
-  .action((id, opts) => getReceiver(id, opts))
+  .action((id, opts) => getCustomer(id, opts))
 
 customers
   .command('create')
@@ -173,7 +173,7 @@ customers
   .option('--external-id <id>', 'External ID')
   .option('--kyc-status <status>', 'KYC status (verifying, approved, rejected, deprecated)', 'approved')
   .option('--json', 'Output as JSON', false)
-  .action(opts => createReceiver(opts))
+  .action(opts => createCustomer(opts))
 
 customers
   .command('update <id>')
@@ -186,65 +186,65 @@ customers
   .option('--country <country>', 'ISO 3166 country code')
   .option('--kyc-status <status>', 'KYC status (verifying, approved, rejected, deprecated)')
   .option('--json', 'Output as JSON', false)
-  .action((id, opts) => updateReceiver(id, opts))
+  .action((id, opts) => updateCustomer(id, opts))
 
 customers
   .command('delete <id>')
   .description('Delete a customer')
   .option('--json', 'Output as JSON', false)
-  .action((id, opts) => deleteReceiver(id, opts))
+  .action((id, opts) => deleteCustomer(id, opts))
 
 customers
   .command('limits <id>')
-  .description('Get receiver limits')
+  .description('Get customer limits')
   .option('--json', 'Output as JSON', false)
-  .action((id, opts) => getReceiverLimits(id, opts))
+  .action((id, opts) => getCustomerLimits(id, opts))
 
 customers
   .command('limits_increase_requests <id>')
-  .description('Get receiver limit-increase requests')
+  .description('Get customer limit-increase requests')
   .option('--json', 'Output as JSON', false)
-  .action((id, opts) => getReceiverLimitsIncreaseRequests(id, opts))
+  .action((id, opts) => getCustomerLimitIncreaseRequests(id, opts))
 
-receivers
+customers
   .command('create_limit_increase <id>')
-  .description('Request a limit increase for a receiver')
+  .description('Request a limit increase for a customer')
   .requiredOption('--per-transaction <amount>', 'Per-transaction limit in cents')
   .requiredOption('--daily <amount>', 'Daily limit in cents')
   .requiredOption('--monthly <amount>', 'Monthly limit in cents')
-  .requiredOption('--supporting-document-type <type>', 'Supporting document type (individual_bank_statement, individual_tax_return, individual_proof_of_income, business_bank_statement, business_financial_statements, business_tax_return)')
+  .requiredOption('--supporting-document-type <type>', 'Supporting document type')
   .requiredOption('--supporting-document-file <url>', 'Supporting document URL (upload via `blindpay upload` first)')
   .option('--json', 'Output as JSON', false)
-  .action((id, opts) => createReceiverLimitIncrease(id, opts))
+  .action((id, opts) => createCustomerLimitIncrease(id, opts))
 
 // ── Bank Accounts ───────────────────────────────────────────────────────
 const bankAccounts = program.command('bank_accounts').description('Manage bank accounts')
   .addHelpText('after', `
 Examples:
-  $ blindpay bank_accounts list --receiver-id <id>
-  $ blindpay bank_accounts get <id> --receiver-id <receiver-id>
-  $ blindpay bank_accounts create --receiver-id <id> --type ach --routing-number 021000021 --account-number 123456789
-  $ blindpay bank_accounts create --receiver-id <id> --type pix --pix-key user@email.com
-  $ blindpay bank_accounts delete <id> --receiver-id <receiver-id>`)
+  $ blindpay bank_accounts list --customer-id <id>
+  $ blindpay bank_accounts get <id> --customer-id <customer-id>
+  $ blindpay bank_accounts create --customer-id <id> --type ach --routing-number 021000021 --account-number 123456789
+  $ blindpay bank_accounts create --customer-id <id> --type pix --pix-key user@email.com
+  $ blindpay bank_accounts delete <id> --customer-id <customer-id>`)
 
 bankAccounts
   .command('list')
-  .description('List bank accounts for a receiver')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .description('List bank accounts for a customer')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action(opts => listBankAccounts(opts))
 
 bankAccounts
   .command('get <id>')
   .description('Get a bank account by ID')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => getBankAccount(id, opts))
 
 bankAccounts
   .command('create')
   .description('Create a new bank account')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--type <type>', 'Bank account type (ach, wire, pix, etc.)', 'ach')
   .option('--name <name>', 'Account name')
   .option('--beneficiary-name <name>', 'Beneficiary name')
@@ -262,7 +262,7 @@ bankAccounts
 bankAccounts
   .command('delete <id>')
   .description('Delete a bank account')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => deleteBankAccount(id, opts))
 
@@ -270,29 +270,29 @@ bankAccounts
 const blockchainWallets = program.command('blockchain_wallets').description('Manage blockchain wallets')
   .addHelpText('after', `
 Examples:
-  $ blindpay blockchain_wallets list --receiver-id <id>
-  $ blindpay blockchain_wallets get <id> --receiver-id <receiver-id>
-  $ blindpay blockchain_wallets create --receiver-id <id> --address 0x... --network base
-  $ blindpay blockchain_wallets delete <id> --receiver-id <receiver-id>`)
+  $ blindpay blockchain_wallets list --customer-id <id>
+  $ blindpay blockchain_wallets get <id> --customer-id <customer-id>
+  $ blindpay blockchain_wallets create --customer-id <id> --address 0x... --network base
+  $ blindpay blockchain_wallets delete <id> --customer-id <customer-id>`)
 
 blockchainWallets
   .command('list')
-  .description('List blockchain wallets for a receiver')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .description('List blockchain wallets for a customer')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action(opts => listBlockchainWallets(opts))
 
 blockchainWallets
   .command('get <id>')
   .description('Get a blockchain wallet by ID')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => getBlockchainWallet(id, opts))
 
 blockchainWallets
   .command('create')
   .description('Create a new blockchain wallet')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .requiredOption('--address <address>', 'Wallet address')
   .option('--network <network>', 'Blockchain network', 'base')
   .option('--name <name>', 'Wallet name')
@@ -303,7 +303,7 @@ blockchainWallets
 blockchainWallets
   .command('delete <id>')
   .description('Delete a blockchain wallet')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => deleteBlockchainWallet(id, opts))
 
@@ -508,20 +508,20 @@ apiKeys
 const virtualAccounts = program.command('virtual_accounts').description('Manage virtual accounts')
   .addHelpText('after', `
 Examples:
-  $ blindpay virtual_accounts list --receiver-id <id>
-  $ blindpay virtual_accounts create --receiver-id <id> --blockchain-wallet-id <wallet-id>`)
+  $ blindpay virtual_accounts list --customer-id <id>
+  $ blindpay virtual_accounts create --customer-id <id> --blockchain-wallet-id <wallet-id>`)
 
 virtualAccounts
   .command('list')
-  .description('List virtual accounts for a receiver')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .description('List virtual accounts for a customer')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action(opts => listVirtualAccounts(opts))
 
 virtualAccounts
   .command('create')
   .description('Create a virtual account')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .requiredOption('--blockchain-wallet-id <id>', 'Blockchain wallet ID')
   .option('--json', 'Output as JSON', false)
   .action(opts => createVirtualAccount(opts))
@@ -530,12 +530,12 @@ virtualAccounts
 const offrampWallets = program.command('offramp_wallets').description('Manage offramp wallets')
   .addHelpText('after', `
 Examples:
-  $ blindpay offramp_wallets list --receiver-id <id> --bank-account-id <bank-id>`)
+  $ blindpay offramp_wallets list --customer-id <id> --bank-account-id <bank-id>`)
 
 offrampWallets
   .command('list')
   .description('List offramp wallets')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .requiredOption('--bank-account-id <id>', 'Bank account ID')
   .option('--json', 'Output as JSON', false)
   .action(opts => listOfframpWallets(opts))
@@ -596,37 +596,37 @@ available
 const wallets = program.command('wallets').description('Manage custodial wallets (BlindPay-managed, with balance)')
   .addHelpText('after', `
 Examples:
-  $ blindpay wallets list --receiver-id <id>
-  $ blindpay wallets get <id> --receiver-id <receiver-id>
-  $ blindpay wallets balance <id> --receiver-id <receiver-id>
-  $ blindpay wallets create --receiver-id <id> --network polygon --name "Main Wallet"
-  $ blindpay wallets delete <id> --receiver-id <receiver-id>`)
+  $ blindpay wallets list --customer-id <id>
+  $ blindpay wallets get <id> --customer-id <customer-id>
+  $ blindpay wallets balance <id> --customer-id <customer-id>
+  $ blindpay wallets create --customer-id <id> --network polygon --name "Main Wallet"
+  $ blindpay wallets delete <id> --customer-id <customer-id>`)
 
 wallets
   .command('list')
-  .description('List custodial wallets for a receiver')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .description('List custodial wallets for a customer')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action(opts => listWallets(opts))
 
 wallets
   .command('get <id>')
   .description('Get a custodial wallet by ID')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => getWallet(id, opts))
 
 wallets
   .command('balance <id>')
   .description('Get a custodial wallet balance (USDC/USDT/USDB)')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => getWalletBalance(id, opts))
 
 wallets
   .command('create')
   .description('Create a new custodial wallet')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .requiredOption('--network <network>', 'Network')
   .requiredOption('--name <name>', 'Wallet name')
   .option('--external-id <id>', 'External ID')
@@ -636,7 +636,7 @@ wallets
 wallets
   .command('delete <id>')
   .description('Delete a custodial wallet')
-  .requiredOption('--receiver-id <id>', 'Receiver ID')
+  .requiredOption('--customer-id <id>', 'Customer ID')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => deleteWallet(id, opts))
 
@@ -715,13 +715,13 @@ const tos = program.command('tos').description('Initiate Terms of Service flow')
   .addHelpText('after', `
 Examples:
   $ blindpay tos initiate --idempotency-key <key>
-  $ blindpay tos initiate --idempotency-key <key> --receiver-id <id> --redirect-url https://example.com`)
+  $ blindpay tos initiate --idempotency-key <key> --customer-id <id> --redirect-url https://example.com`)
 
 tos
   .command('initiate')
   .description('Initiate a Terms of Service session and return a hosted URL')
   .requiredOption('--idempotency-key <key>', 'Idempotency key')
-  .option('--receiver-id <id>', 'Receiver ID')
+  .option('--customer-id <id>', 'Customer ID')
   .option('--redirect-url <url>', 'Redirect URL after acceptance')
   .option('--json', 'Output as JSON', false)
   .action(opts => initiateTos(opts))
@@ -747,7 +747,7 @@ const schema = program.command('schema').description('Introspect CLI resource sc
   .addHelpText('after', `
 Examples:
   $ blindpay schema                              # list all resources
-  $ blindpay schema customers                    # full schema for receivers
+  $ blindpay schema customers                    # full schema for customers
   $ blindpay schema bank_accounts                # schema + available rails
   $ blindpay schema bank_accounts --rail ach     # schema + rail-specific fields`)
 
