@@ -253,11 +253,14 @@ export async function createBankAccount(options: {
   accountType?: string
   accountClass?: string
   country?: string
+  sepaIban?: string
+  sepaBeneficiaryBic?: string
+  sepaBeneficiaryLegalName?: string
   json: boolean
 }) {
   try {
     const ctx = resolveContext()
-    const body = {
+    const body: Record<string, unknown> = {
       type: options.type || 'ach',
       name: options.name || 'CLI Bank Account',
       recipient_relationship: options.recipientRelationship ?? null,
@@ -269,6 +272,9 @@ export async function createBankAccount(options: {
       account_class: options.accountClass ?? null,
       country: options.country ?? null,
     }
+    if (options.sepaIban) body.sepa_iban = options.sepaIban
+    if (options.sepaBeneficiaryBic) body.sepa_beneficiary_bic = options.sepaBeneficiaryBic
+    if (options.sepaBeneficiaryLegalName) body.sepa_beneficiary_legal_name = options.sepaBeneficiaryLegalName
     const ba = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/bank-accounts`, body)
     clack.log.success(`Created bank account ${ba.id} (${ba.type})`)
     if (options.json)
