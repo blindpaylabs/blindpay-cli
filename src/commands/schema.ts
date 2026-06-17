@@ -19,12 +19,13 @@ interface ResourceSchema {
 
 const schemas: ResourceSchema[] = [
   {
-    resource: 'receivers',
+    resource: 'customers',
     commands: ['list', 'get', 'create', 'update', 'delete'],
     create: {
       fields: [
-        { name: 'email', type: 'string', required: true, description: 'Receiver email address' },
-        { name: 'type', type: 'string', required: false, description: 'Receiver type', default: 'individual', enum: ['individual', 'business'] },
+        { name: 'email', type: 'string', required: true, description: 'Customer email address' },
+        { name: 'kyc_type', type: 'string', required: true, description: 'KYC type', enum: ['light', 'standard', 'enhanced'] },
+        { name: 'type', type: 'string', required: false, description: 'Customer type', default: 'individual', enum: ['individual', 'business'] },
         { name: 'name', type: 'string', required: false, description: 'Full name (individual); auto-splits into first_name and last_name' },
         { name: 'first_name', type: 'string', required: false, description: 'First name (individual)' },
         { name: 'last_name', type: 'string', required: false, description: 'Last name (individual)' },
@@ -32,7 +33,6 @@ const schemas: ResourceSchema[] = [
         { name: 'country', type: 'string', required: false, description: 'ISO 3166 country code', default: 'US' },
         { name: 'tax_id', type: 'string', required: false, description: 'Tax ID' },
         { name: 'external_id', type: 'string', required: false, description: 'External reference ID' },
-        { name: 'kyc_status', type: 'string', required: false, description: 'KYC verification status', default: 'approved', enum: ['verifying', 'approved', 'rejected', 'deprecated'] },
       ],
     },
     update: {
@@ -41,9 +41,8 @@ const schemas: ResourceSchema[] = [
         { name: 'first_name', type: 'string', required: false, description: 'First name (individual)' },
         { name: 'last_name', type: 'string', required: false, description: 'Last name (individual)' },
         { name: 'legal_name', type: 'string', required: false, description: 'Legal name (business)' },
-        { name: 'email', type: 'string', required: false, description: 'Receiver email address' },
+        { name: 'email', type: 'string', required: false, description: 'Customer email address' },
         { name: 'country', type: 'string', required: false, description: 'ISO 3166 country code' },
-        { name: 'kyc_status', type: 'string', required: false, description: 'KYC verification status', enum: ['verifying', 'approved', 'rejected', 'deprecated'] },
       ],
     },
   },
@@ -52,7 +51,7 @@ const schemas: ResourceSchema[] = [
     commands: ['list', 'get', 'create', 'delete'],
     create: {
       fields: [
-        { name: 'receiver_id', type: 'string', required: true, description: 'Receiver ID that owns this bank account' },
+        { name: 'customer_id', type: 'string', required: true, description: 'Customer ID that owns this bank account' },
         { name: 'type', type: 'string', required: false, description: 'Bank account type / payment rail', default: 'ach', enum: Object.keys(bankDetailFields) },
         { name: 'name', type: 'string', required: false, description: 'Account display name', default: 'CLI Bank Account' },
         { name: 'beneficiary_name', type: 'string', required: false, description: 'Beneficiary name on the account' },
@@ -63,6 +62,16 @@ const schemas: ResourceSchema[] = [
         { name: 'pix_key', type: 'string', required: false, description: 'PIX key (for PIX rail)' },
         { name: 'recipient_relationship', type: 'string', required: false, description: 'Relationship to recipient' },
         { name: 'country', type: 'string', required: false, description: 'Country code' },
+        { name: 'swift_ifsc_branch_code', type: 'string', required: false, description: 'SWIFT/IFSC branch code (international_swift accounts)' },
+        { name: 'sepa_iban', type: 'string', required: false, description: 'IBAN (sepa accounts)' },
+        { name: 'sepa_beneficiary_bic', type: 'string', required: false, description: 'Beneficiary BIC/SWIFT code (sepa accounts)' },
+        { name: 'sepa_beneficiary_legal_name', type: 'string', required: false, description: 'Beneficiary legal name (sepa accounts)' },
+        { name: 'sepa_beneficiary_address_line_1', type: 'string', required: false, description: 'Beneficiary address line 1 (sepa accounts)' },
+        { name: 'sepa_beneficiary_address_line_2', type: 'string', required: false, description: 'Beneficiary address line 2 (sepa accounts)' },
+        { name: 'sepa_beneficiary_city', type: 'string', required: false, description: 'Beneficiary city (sepa accounts)' },
+        { name: 'sepa_beneficiary_state_province_region', type: 'string', required: false, description: 'Beneficiary state/province/region (sepa accounts)' },
+        { name: 'sepa_beneficiary_postal_code', type: 'string', required: false, description: 'Beneficiary postal code (sepa accounts)' },
+        { name: 'sepa_beneficiary_country', type: 'string', required: false, description: 'Beneficiary country code (sepa accounts)' },
       ],
     },
   },
@@ -71,7 +80,7 @@ const schemas: ResourceSchema[] = [
     commands: ['list', 'get', 'create', 'delete'],
     create: {
       fields: [
-        { name: 'receiver_id', type: 'string', required: true, description: 'Receiver ID that owns this wallet' },
+        { name: 'customer_id', type: 'string', required: true, description: 'Customer ID that owns this wallet' },
         { name: 'address', type: 'string', required: true, description: 'Blockchain wallet address' },
         { name: 'network', type: 'string', required: false, description: 'Blockchain network', default: 'base', enum: ['base', 'ethereum', 'polygon', 'solana', 'stellar', 'arbitrum', 'optimism'] },
         { name: 'external_id', type: 'string', required: false, description: 'External reference ID' },
@@ -162,7 +171,7 @@ const schemas: ResourceSchema[] = [
     commands: ['list', 'create'],
     create: {
       fields: [
-        { name: 'receiver_id', type: 'string', required: true, description: 'Receiver ID' },
+        { name: 'customer_id', type: 'string', required: true, description: 'Customer ID' },
         { name: 'blockchain_wallet_id', type: 'string', required: true, description: 'Blockchain wallet ID' },
       ],
     },
