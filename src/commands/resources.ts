@@ -67,11 +67,11 @@ function extractList(res: any): any[] {
   return []
 }
 
-// Receivers
-export async function listReceivers(options: { json: boolean }) {
+// Customers
+export async function listCustomers(options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers`)
     const list = extractList(res)
     const display = list.map((r: any) => ({
       id: r.id,
@@ -88,20 +88,21 @@ export async function listReceivers(options: { json: boolean }) {
   }
 }
 
-export async function getReceiver(id: string, options: { json: boolean }) {
+export async function getCustomer(id: string, options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const receiver = await apiGet(ctx, `${instancePath(ctx)}/receivers/${id}`)
-    printResult(receiver, options.json)
+    const customer = await apiGet(ctx, `${instancePath(ctx)}/customers/${id}`)
+    printResult(customer, options.json)
   }
   catch (e) {
     handleApiError(e, options.json)
   }
 }
 
-export async function createReceiver(options: {
+export async function createCustomer(options: {
   email: string
   type?: string
+  kycType: string
   name?: string
   firstName?: string
   lastName?: string
@@ -109,7 +110,6 @@ export async function createReceiver(options: {
   country?: string
   taxId?: string
   externalId?: string
-  kycStatus?: string
   json: boolean
 }) {
   try {
@@ -129,6 +129,7 @@ export async function createReceiver(options: {
     }
     const body = {
       type: options.type || 'individual',
+      kyc_type: options.kycType,
       email: options.email,
       tax_id: options.taxId ?? null,
       first_name: first_name ?? null,
@@ -136,22 +137,21 @@ export async function createReceiver(options: {
       legal_name: options.legalName ?? null,
       country: options.country || 'US',
       external_id: options.externalId ?? null,
-      kyc_status: options.kycStatus ?? 'approved',
     }
-    const receiver = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/receivers`, body)
+    const customer = await apiPost<{ id: string, customer_id: string }>(ctx, `${instancePath(ctx)}/customers`, body)
     const displayName = body.type === 'business'
       ? (body.legal_name || '—')
       : [body.first_name, body.last_name].filter(Boolean).join(' ').trim() || '—'
-    clack.log.success(`Created receiver ${receiver.id} (${receiver.type}, ${displayName})`)
+    clack.log.success(`Created customer ${customer.id} (${body.type}, ${displayName})`)
     if (options.json)
-      console.log(formatOutput(receiver, true))
+      console.log(formatOutput(customer, true))
   }
   catch (e) {
     handleApiError(e, options.json)
   }
 }
 
-export async function updateReceiver(
+export async function updateCustomer(
   id: string,
   options: {
     name?: string
@@ -160,7 +160,6 @@ export async function updateReceiver(
     legalName?: string
     email?: string
     country?: string
-    kycStatus?: string
     json?: boolean
   },
 ) {
@@ -177,8 +176,6 @@ export async function updateReceiver(
       body.email = options.email
     if (options.country !== undefined)
       body.country = options.country
-    if (options.kycStatus !== undefined)
-      body.kyc_status = options.kycStatus
     if (options.name !== undefined && options.name.trim()) {
       const parts = options.name.trim().split(/\s+/)
       if (parts.length >= 2) {
@@ -191,25 +188,25 @@ export async function updateReceiver(
       }
     }
     if (Object.keys(body).length === 0) {
-      exitWithError('Provide at least one field to update (e.g. --name, --kyc-status)', 1, options.json)
+      exitWithError('Provide at least one field to update (e.g. --name, --email)', 1, options.json)
     }
-    const receiver = await apiPut<Record<string, any>>(ctx, `${instancePath(ctx)}/receivers/${id}`, body)
-    clack.log.success(`Updated receiver ${id}`)
+    const customer = await apiPut<Record<string, any>>(ctx, `${instancePath(ctx)}/customers/${id}`, body)
+    clack.log.success(`Updated customer ${id}`)
     if (options.json)
-      console.log(formatOutput(receiver, true))
+      console.log(formatOutput(customer, true))
     else
-      console.log(formatOutput(receiver, false))
+      console.log(formatOutput(customer, false))
   }
   catch (e) {
     handleApiError(e, options.json)
   }
 }
 
-export async function deleteReceiver(id: string, options: { json?: boolean } = {}) {
+export async function deleteCustomer(id: string, options: { json?: boolean } = {}) {
   try {
     const ctx = resolveContext()
-    await apiDelete(ctx, `${instancePath(ctx)}/receivers/${id}`)
-    clack.log.success(`Deleted receiver ${id}`)
+    await apiDelete(ctx, `${instancePath(ctx)}/customers/${id}`)
+    clack.log.success(`Deleted customer ${id}`)
   }
   catch (e) {
     handleApiError(e, options.json)
@@ -217,10 +214,10 @@ export async function deleteReceiver(id: string, options: { json?: boolean } = {
 }
 
 // Bank Accounts
-export async function listBankAccounts(options: { receiverId: string, json: boolean }) {
+export async function listBankAccounts(options: { customerId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/bank-accounts`)
     const list = extractList(res)
     const display = list.map((a: any) => ({ id: a.id, type: a.type, name: a.name, status: a.status, country: a.country }))
     printResult(options.json ? list : display, options.json, ['id', 'type', 'name', 'status', 'country'])
@@ -230,10 +227,10 @@ export async function listBankAccounts(options: { receiverId: string, json: bool
   }
 }
 
-export async function getBankAccount(id: string, options: { receiverId: string, json: boolean }) {
+export async function getBankAccount(id: string, options: { customerId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const account = await apiGet(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts/${id}`)
+    const account = await apiGet(ctx, `${instancePath(ctx)}/customers/${options.customerId}/bank-accounts/${id}`)
     printResult(account, options.json)
   }
   catch (e) {
@@ -242,7 +239,7 @@ export async function getBankAccount(id: string, options: { receiverId: string, 
 }
 
 export async function createBankAccount(options: {
-  receiverId: string
+  customerId: string
   type?: string
   name?: string
   recipientRelationship?: string
@@ -271,7 +268,7 @@ export async function createBankAccount(options: {
       country: options.country ?? null,
       swift_ifsc_branch_code: options.swiftIfscBranchCode ?? null,
     }
-    const ba = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts`, body)
+    const ba = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/bank-accounts`, body)
     clack.log.success(`Created bank account ${ba.id} (${ba.type})`)
     if (options.json)
       console.log(formatOutput(ba, true))
@@ -281,10 +278,10 @@ export async function createBankAccount(options: {
   }
 }
 
-export async function deleteBankAccount(id: string, options: { receiverId: string, json?: boolean }) {
+export async function deleteBankAccount(id: string, options: { customerId: string, json?: boolean }) {
   try {
     const ctx = resolveContext()
-    await apiDelete(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts/${id}`)
+    await apiDelete(ctx, `${instancePath(ctx)}/customers/${options.customerId}/bank-accounts/${id}`)
     clack.log.success(`Deleted bank account ${id}`)
   }
   catch (e) {
@@ -293,10 +290,10 @@ export async function deleteBankAccount(id: string, options: { receiverId: strin
 }
 
 // Blockchain Wallets
-export async function listBlockchainWallets(options: { receiverId: string, json: boolean }) {
+export async function listBlockchainWallets(options: { customerId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/blockchain-wallets`)
     const list = extractList(res)
     const display = list.map((w: any) => ({ id: w.id, address: truncate(w.address, 20), network: w.network }))
     printResult(options.json ? list : display, options.json, ['id', 'address', 'network'])
@@ -306,10 +303,10 @@ export async function listBlockchainWallets(options: { receiverId: string, json:
   }
 }
 
-export async function getBlockchainWallet(id: string, options: { receiverId: string, json: boolean }) {
+export async function getBlockchainWallet(id: string, options: { customerId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const wallet = await apiGet(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets/${id}`)
+    const wallet = await apiGet(ctx, `${instancePath(ctx)}/customers/${options.customerId}/blockchain-wallets/${id}`)
     printResult(wallet, options.json)
   }
   catch (e) {
@@ -318,22 +315,24 @@ export async function getBlockchainWallet(id: string, options: { receiverId: str
 }
 
 export async function createBlockchainWallet(options: {
-  receiverId: string
-  address: string
+  customerId: string
+  address?: string
   network?: string
   name?: string
-  externalId?: string
+  signatureTxHash?: string
+  isAccountAbstraction?: boolean
   json: boolean
 }) {
   try {
     const ctx = resolveContext()
-    const body = {
-      address: options.address,
+    const body: Record<string, any> = {
       network: options.network || 'base',
       name: options.name || 'CLI Blockchain Wallet',
-      external_id: options.externalId ?? null,
     }
-    const wallet = await apiPost<{ id: string, network: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets`, body)
+    if (options.address !== undefined) body.address = options.address
+    if (options.signatureTxHash !== undefined) body.signature_tx_hash = options.signatureTxHash
+    if (options.isAccountAbstraction !== undefined) body.is_account_abstraction = options.isAccountAbstraction
+    const wallet = await apiPost<{ id: string, network: string }>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/blockchain-wallets`, body)
     clack.log.success(`Created blockchain wallet ${wallet.id} (${wallet.network})`)
     if (options.json)
       console.log(formatOutput(wallet, true))
@@ -343,11 +342,22 @@ export async function createBlockchainWallet(options: {
   }
 }
 
-export async function deleteBlockchainWallet(id: string, options: { receiverId: string, json?: boolean }) {
+export async function deleteBlockchainWallet(id: string, options: { customerId: string, json?: boolean }) {
   try {
     const ctx = resolveContext()
-    await apiDelete(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/blockchain-wallets/${id}`)
+    await apiDelete(ctx, `${instancePath(ctx)}/customers/${options.customerId}/blockchain-wallets/${id}`)
     clack.log.success(`Deleted blockchain wallet ${id}`)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function getBlockchainWalletSignMessage(options: { customerId: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiGet<{ message: string }>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/blockchain-wallets/sign-message`)
+    printResult(res, options.json)
   }
   catch (e) {
     handleApiError(e, options.json)
@@ -661,23 +671,38 @@ export async function deleteApiKey(id: string, options: { json?: boolean } = {})
 }
 
 // Virtual Accounts
-export async function listVirtualAccounts(options: { receiverId: string, json: boolean }) {
+export async function listVirtualAccounts(options: { customerId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/virtual-accounts`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/virtual-accounts`)
     const list = extractList(res)
-    const display = list.map((a: any) => ({ id: a.id, account_number: a.account_number, routing_number: a.routing_number, kyc_status: a.kyc_status }))
-    printResult(options.json ? list : display, options.json, ['id', 'account_number', 'routing_number', 'kyc_status'])
+    const display = list.map((a: any) => ({ id: a.id, banking_partner: a.banking_partner, token: a.token, kyc_status: a.kyc_status }))
+    printResult(options.json ? list : display, options.json, ['id', 'banking_partner', 'token', 'kyc_status'])
   }
   catch (e) {
     handleApiError(e, options.json)
   }
 }
 
-export async function createVirtualAccount(options: { receiverId: string, blockchainWalletId: string, json: boolean }) {
+export async function createVirtualAccount(options: {
+  customerId: string
+  bankingPartner: string
+  token: string
+  blockchainWalletId: string
+  soleProprietorDocType?: string
+  soleProprietorDocFile?: string
+  json: boolean
+}) {
   try {
     const ctx = resolveContext()
-    const account = await apiPost<{ id: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/virtual-accounts`, { blockchain_wallet_id: options.blockchainWalletId })
+    const body: Record<string, any> = {
+      banking_partner: options.bankingPartner,
+      token: options.token,
+      blockchain_wallet_id: options.blockchainWalletId,
+    }
+    if (options.soleProprietorDocType !== undefined) body.sole_proprietor_doc_type = options.soleProprietorDocType
+    if (options.soleProprietorDocFile !== undefined) body.sole_proprietor_doc_file = options.soleProprietorDocFile
+    const account = await apiPost<{ id: string }>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/virtual-accounts`, body)
     clack.log.success(`Created virtual account ${account.id}`)
     if (options.json)
       console.log(formatOutput(account, true))
@@ -687,14 +712,84 @@ export async function createVirtualAccount(options: { receiverId: string, blockc
   }
 }
 
-// Offramp Wallets
-export async function listOfframpWallets(options: { receiverId: string, bankAccountId: string, json: boolean }) {
+export async function getVirtualAccount(id: string, options: { customerId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/bank-accounts/${options.bankAccountId}/offramp-wallets`)
+    const account = await apiGet(ctx, `${instancePath(ctx)}/customers/${options.customerId}/virtual-accounts/${id}`)
+    printResult(account, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function updateVirtualAccount(
+  id: string,
+  options: {
+    customerId: string
+    token: string
+    blockchainWalletId: string
+    json: boolean
+  },
+) {
+  try {
+    const ctx = resolveContext()
+    const body = {
+      token: options.token,
+      blockchain_wallet_id: options.blockchainWalletId,
+    }
+    await apiPut(ctx, `${instancePath(ctx)}/customers/${options.customerId}/virtual-accounts/${id}`, body)
+    clack.log.success(`Updated virtual account ${id}`)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Offramp Wallets
+export async function listOfframpWallets(options: { customerId: string, bankAccountId: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/bank-accounts/${options.bankAccountId}/offramp-wallets`)
     const list = extractList(res)
     const display = list.map((w: any) => ({ id: w.id, address: truncate(w.address, 20), network: w.network }))
     printResult(options.json ? list : display, options.json, ['id', 'address', 'network'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function createOfframpWallet(options: {
+  customerId: string
+  bankAccountId: string
+  network: string
+  externalId?: string
+  json: boolean
+}) {
+  try {
+    const ctx = resolveContext()
+    const body: Record<string, any> = { network: options.network }
+    if (options.externalId !== undefined) body.external_id = options.externalId
+    const wallet = await apiPost<{ id: string, network: string, address: string }>(
+      ctx,
+      `${instancePath(ctx)}/customers/${options.customerId}/bank-accounts/${options.bankAccountId}/offramp-wallets`,
+      body,
+    )
+    clack.log.success(`Created offramp wallet ${wallet.id} (${wallet.network}) -> ${wallet.address}`)
+    if (options.json)
+      console.log(formatOutput(wallet, true))
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function getOfframpWallet(id: string, options: { customerId: string, bankAccountId: string, json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const wallet = await apiGet(ctx, `${instancePath(ctx)}/customers/${options.customerId}/bank-accounts/${options.bankAccountId}/offramp-wallets/${id}`)
+    printResult(wallet, options.json)
   }
   catch (e) {
     handleApiError(e, options.json)
@@ -748,11 +843,23 @@ export async function updateInstance(options: {
   }
 }
 
-// Receiver Limits
-export async function getReceiverLimits(receiverId: string, options: { json: boolean }) {
+export async function migrateInstanceOwnership(options: { userId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const limits = await apiGet(ctx, `${instancePath(ctx)}/limits/receivers/${receiverId}`)
+    const res = await apiPost<{ success: boolean }>(ctx, `${instancePath(ctx)}/ownership`, { user_id: options.userId })
+    clack.log.success('Instance ownership migrated')
+    if (options.json) console.log(formatOutput(res, true))
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Customer Limits
+export async function getCustomerLimits(customerId: string, options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const limits = await apiGet(ctx, `${instancePath(ctx)}/limits/customers/${customerId}`)
     printResult(limits, options.json)
   }
   catch (e) {
@@ -760,10 +867,10 @@ export async function getReceiverLimits(receiverId: string, options: { json: boo
   }
 }
 
-export async function getReceiverLimitsIncreaseRequests(receiverId: string, options: { json: boolean }) {
+export async function getCustomerLimitsIncreaseRequests(customerId: string, options: { json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limit-increase`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${customerId}/limit-increase`)
     const list = extractList(res)
     printResult(list, options.json, ['id', 'status', 'per_transaction', 'daily', 'monthly', 'created_at'])
   }
@@ -772,8 +879,8 @@ export async function getReceiverLimitsIncreaseRequests(receiverId: string, opti
   }
 }
 
-export async function createReceiverLimitIncrease(
-  receiverId: string,
+export async function createCustomerLimitIncrease(
+  customerId: string,
   options: {
     perTransaction: string
     daily: string
@@ -792,9 +899,40 @@ export async function createReceiverLimitIncrease(
       supporting_document_type: options.supportingDocumentType,
       supporting_document_file: options.supportingDocumentFile,
     }
-    const res = await apiPost<{ id: string }>(ctx, `${instancePath(ctx)}/receivers/${receiverId}/limit-increase`, body)
+    const res = await apiPost<{ id: string }>(ctx, `${instancePath(ctx)}/customers/${customerId}/limit-increase`, body)
     clack.log.success(`Created limit increase request ${res.id}`)
     printResult(res, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+// Customer RFI
+export async function getCustomerRfi(customerId: string, options: { json: boolean }) {
+  try {
+    const ctx = resolveContext()
+    const rfi = await apiGet(ctx, `${instancePath(ctx)}/customers/${customerId}/rfi`)
+    printResult(rfi, options.json, ['id', 'status', 'expires_at', 'created_at'])
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function submitCustomerRfi(customerId: string, options: { body: string, json: boolean }) {
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(options.body)
+  }
+  catch (e) {
+    exitWithError(`Invalid --body JSON: ${(e as Error).message}`, 1, options.json)
+  }
+  try {
+    const ctx = resolveContext()
+    const res = await apiPost<{ success: boolean }>(ctx, `${instancePath(ctx)}/customers/${customerId}/rfi`, body!)
+    clack.log.success('RFI response submitted')
+    if (options.json) console.log(formatOutput(res, true))
   }
   catch (e) {
     handleApiError(e, options.json)
@@ -842,10 +980,10 @@ export async function getAvailableBankDetails(options: { rail: string, json: boo
 }
 
 // Wallets (custodial, distinct from blockchain_wallets)
-export async function listWallets(options: { receiverId: string, json: boolean }) {
+export async function listWallets(options: { customerId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets`)
+    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/wallets`)
     const list = extractList(res)
     printResult(list, options.json, ['id', 'name', 'network', 'address'])
   }
@@ -854,10 +992,10 @@ export async function listWallets(options: { receiverId: string, json: boolean }
   }
 }
 
-export async function getWallet(id: string, options: { receiverId: string, json: boolean }) {
+export async function getWallet(id: string, options: { customerId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const wallet = await apiGet(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets/${id}`)
+    const wallet = await apiGet(ctx, `${instancePath(ctx)}/customers/${options.customerId}/wallets/${id}`)
     printResult(wallet, options.json)
   }
   catch (e) {
@@ -865,10 +1003,10 @@ export async function getWallet(id: string, options: { receiverId: string, json:
   }
 }
 
-export async function getWalletBalance(id: string, options: { receiverId: string, json: boolean }) {
+export async function getWalletBalance(id: string, options: { customerId: string, json: boolean }) {
   try {
     const ctx = resolveContext()
-    const balance = await apiGet(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets/${id}/balance`)
+    const balance = await apiGet(ctx, `${instancePath(ctx)}/customers/${options.customerId}/wallets/${id}/balance`)
     printResult(balance, options.json)
   }
   catch (e) {
@@ -877,7 +1015,7 @@ export async function getWalletBalance(id: string, options: { receiverId: string
 }
 
 export async function createWallet(options: {
-  receiverId: string
+  customerId: string
   network: string
   name: string
   externalId?: string
@@ -890,7 +1028,7 @@ export async function createWallet(options: {
       name: options.name,
     }
     if (options.externalId !== undefined) body.external_id = options.externalId
-    const wallet = await apiPost<{ id: string, network: string }>(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets`, body)
+    const wallet = await apiPost<{ id: string, network: string }>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/wallets`, body)
     clack.log.success(`Created wallet ${wallet.id} (${wallet.network})`)
     printResult(wallet, options.json)
   }
@@ -899,10 +1037,10 @@ export async function createWallet(options: {
   }
 }
 
-export async function deleteWallet(id: string, options: { receiverId: string, json?: boolean }) {
+export async function deleteWallet(id: string, options: { customerId: string, json?: boolean }) {
   try {
     const ctx = resolveContext()
-    await apiDelete(ctx, `${instancePath(ctx)}/receivers/${options.receiverId}/wallets/${id}`)
+    await apiDelete(ctx, `${instancePath(ctx)}/customers/${options.customerId}/wallets/${id}`)
     clack.log.success(`Deleted wallet ${id}`)
   }
   catch (e) {
@@ -1043,6 +1181,24 @@ export async function uploadFile(options: { file: string, bucket: string, instan
     const body = await res.json() as { file_url: string }
     if (!options.json) clack.log.success(`Uploaded: ${body.file_url}`)
     printResult(body, options.json)
+  }
+  catch (e) {
+    handleApiError(e, options.json)
+  }
+}
+
+export async function analyzeDocument(options: { body: string, json: boolean }) {
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(options.body)
+  }
+  catch (e) {
+    exitWithError(`Invalid --body JSON: ${(e as Error).message}`, 1, options.json)
+  }
+  try {
+    const ctx = resolveContext()
+    const res = await apiPost<{ approval_rate: string, description: string }>(ctx, `/v1/upload/analyze`, body!)
+    printResult(res, options.json, ['approval_rate', 'description'])
   }
   catch (e) {
     handleApiError(e, options.json)
