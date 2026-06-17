@@ -1014,7 +1014,9 @@ export async function initiateTos(options: { idempotencyKey: string, customerId?
   try {
     const ctx = resolveContext()
     const body: Record<string, any> = { idempotency_key: options.idempotencyKey }
-    if (options.customerId !== undefined) body.customer_id = options.customerId
+    // The TOS endpoint's body still uses receiver_id on the wire (matches node + the Swift SDK);
+    // keep the clean customerId option but map it to receiver_id. Drop once the API accepts customer_id.
+    if (options.customerId !== undefined) body.receiver_id = options.customerId
     if (options.redirectUrl !== undefined) body.redirect_url = options.redirectUrl
     const res = await apiPost<{ url: string }>(ctx, `/v1/e/instances/${ctx.instanceId}/tos`, body)
     if (!options.json) clack.log.success(`Open this URL to accept the Terms of Service:\n${res.url}`)

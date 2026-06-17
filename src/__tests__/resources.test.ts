@@ -739,7 +739,7 @@ describe('Terms of Service', () => {
     expect(lastCall().url).toBe('https://api.blindpay.com/v1/e/instances/in_testInstance/tos')
     expect(lastCall().body).toEqual({
       idempotency_key: 'idem-1',
-      customer_id: 'cu_xyz',
+      receiver_id: 'cu_xyz',
       redirect_url: 'https://example.com',
     })
   })
