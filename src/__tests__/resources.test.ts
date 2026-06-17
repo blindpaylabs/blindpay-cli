@@ -112,31 +112,32 @@ function lastJsonLog(): Record<string, unknown> {
 
 const BASE = 'https://api.blindpay.com/v1/instances/in_testInstance'
 
-describe('Receivers', () => {
+describe('Customers', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('lists receivers', async () => {
-    mockResponse.body = { data: [{ id: 're_1', type: 'individual', email: 'a@b.com' }] }
-    await resources.listReceivers({ json: true })
+  test('lists customers', async () => {
+    mockResponse.body = { data: [{ id: 'cu_1', type: 'individual', email: 'a@b.com' }] }
+    await resources.listCustomers({ json: true })
     expect(lastCall().method).toBe('GET')
-    expect(lastCall().url).toBe(`${BASE}/receivers`)
+    expect(lastCall().url).toBe(`${BASE}/customers`)
   })
 
-  test('fetches a receiver by id', async () => {
-    mockResponse.body = { id: 're_xyz' }
-    await resources.getReceiver('re_xyz', { json: true })
+  test('fetches a customer by id', async () => {
+    mockResponse.body = { id: 'cu_xyz' }
+    await resources.getCustomer('cu_xyz', { json: true })
     expect(lastCall().method).toBe('GET')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz`)
   })
 
-  test('creates a receiver, splitting --name into first_name and last_name and filling defaults', async () => {
-    mockResponse.body = { id: 're_new', type: 'individual' }
-    await resources.createReceiver({ email: 'a@b.com', name: 'Jane Doe', json: true })
+  test('creates a customer with kyc_type, splitting --name into first_name and last_name', async () => {
+    mockResponse.body = { id: 'cu_new', customer_id: 'cu_new' }
+    await resources.createCustomer({ email: 'a@b.com', kycType: 'standard', name: 'Jane Doe', json: true })
     expect(lastCall().method).toBe('POST')
-    expect(lastCall().url).toBe(`${BASE}/receivers`)
+    expect(lastCall().url).toBe(`${BASE}/customers`)
     expect(lastCall().body).toEqual({
       type: 'individual',
+      kyc_type: 'standard',
       email: 'a@b.com',
       tax_id: null,
       first_name: 'Jane',
@@ -144,40 +145,39 @@ describe('Receivers', () => {
       legal_name: null,
       country: 'US',
       external_id: null,
-      kyc_status: 'approved',
     })
   })
 
   test('updates only the fields explicitly passed via flags', async () => {
-    mockResponse.body = { id: 're_xyz' }
-    await resources.updateReceiver('re_xyz', { email: 'new@b.com', json: true })
+    mockResponse.body = { id: 'cu_xyz' }
+    await resources.updateCustomer('cu_xyz', { email: 'new@b.com', json: true })
     expect(lastCall().method).toBe('PUT')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz`)
     expect(lastCall().body).toEqual({ email: 'new@b.com' })
   })
 
-  test('deletes a receiver by id', async () => {
+  test('deletes a customer by id', async () => {
     mockResponse.body = { success: true }
-    await resources.deleteReceiver('re_xyz', { json: true })
+    await resources.deleteCustomer('cu_xyz', { json: true })
     expect(lastCall().method).toBe('DELETE')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz`)
   })
 
-  test('fetches receiver limits', async () => {
+  test('fetches customer limits', async () => {
     mockResponse.body = { per_transaction: 100 }
-    await resources.getReceiverLimits('re_xyz', { json: true })
-    expect(lastCall().url).toBe(`${BASE}/limits/receivers/re_xyz`)
+    await resources.getCustomerLimits('cu_xyz', { json: true })
+    expect(lastCall().url).toBe(`${BASE}/limits/customers/cu_xyz`)
   })
 
-  test('fetches receiver limit-increase requests', async () => {
+  test('fetches customer limit-increase requests', async () => {
     mockResponse.body = []
-    await resources.getReceiverLimitsIncreaseRequests('re_xyz', { json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/limit-increase`)
+    await resources.getCustomerLimitsIncreaseRequests('cu_xyz', { json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/limit-increase`)
   })
 
   test('creates a limit-increase request with monetary fields parsed as integers', async () => {
     mockResponse.body = { id: 'rl_new' }
-    await resources.createReceiverLimitIncrease('re_xyz', {
+    await resources.createCustomerLimitIncrease('cu_xyz', {
       perTransaction: '100000',
       daily: '200000',
       monthly: '1000000',
@@ -186,7 +186,7 @@ describe('Receivers', () => {
       json: true,
     })
     expect(lastCall().method).toBe('POST')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/limit-increase`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/limit-increase`)
     expect(lastCall().body).toEqual({
       per_transaction: 100000,
       daily: 200000,
@@ -195,28 +195,43 @@ describe('Receivers', () => {
       supporting_document_file: 'https://example.com/doc.pdf',
     })
   })
+
+  test('fetches the open RFI for a customer', async () => {
+    mockResponse.body = { id: 'rfi_1', status: 'pending' }
+    await resources.getCustomerRfi('cu_xyz', { json: true })
+    expect(lastCall().method).toBe('GET')
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/rfi`)
+  })
+
+  test('submits an RFI response with --body JSON', async () => {
+    mockResponse.body = { success: true }
+    await resources.submitCustomerRfi('cu_xyz', { body: '{"address":"123 Main St"}', json: true })
+    expect(lastCall().method).toBe('POST')
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/rfi`)
+    expect(lastCall().body).toEqual({ address: '123 Main St' })
+  })
 })
 
 describe('Bank Accounts', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('lists bank accounts for a receiver', async () => {
+  test('lists bank accounts for a customer', async () => {
     mockResponse.body = []
-    await resources.listBankAccounts({ receiverId: 're_xyz', json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts`)
+    await resources.listBankAccounts({ customerId: 'cu_xyz', json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/bank-accounts`)
   })
 
   test('fetches a bank account by id', async () => {
     mockResponse.body = { id: 'ba_1' }
-    await resources.getBankAccount('ba_1', { receiverId: 're_xyz', json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts/ba_1`)
+    await resources.getBankAccount('ba_1', { customerId: 'cu_xyz', json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/bank-accounts/ba_1`)
   })
 
   test('creates a bank account, snake_casing keys and defaulting unset fields to null', async () => {
     mockResponse.body = { id: 'ba_new', type: 'ach' }
     await resources.createBankAccount({
-      receiverId: 're_xyz',
+      customerId: 'cu_xyz',
       type: 'ach',
       beneficiaryName: 'Jane',
       routingNumber: '021000021',
@@ -224,7 +239,7 @@ describe('Bank Accounts', () => {
       json: true,
     })
     expect(lastCall().method).toBe('POST')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/bank-accounts`)
     expect(lastCall().body).toEqual({
       type: 'ach',
       name: 'CLI Bank Account',
@@ -242,9 +257,9 @@ describe('Bank Accounts', () => {
 
   test('deletes a bank account', async () => {
     mockResponse.body = { success: true }
-    await resources.deleteBankAccount('ba_1', { receiverId: 're_xyz', json: true })
+    await resources.deleteBankAccount('ba_1', { customerId: 'cu_xyz', json: true })
     expect(lastCall().method).toBe('DELETE')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts/ba_1`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/bank-accounts/ba_1`)
   })
 })
 
@@ -252,41 +267,53 @@ describe('Blockchain Wallets', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('lists blockchain wallets for a receiver', async () => {
+  test('lists blockchain wallets for a customer', async () => {
     mockResponse.body = []
-    await resources.listBlockchainWallets({ receiverId: 're_xyz', json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/blockchain-wallets`)
+    await resources.listBlockchainWallets({ customerId: 'cu_xyz', json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/blockchain-wallets`)
   })
 
   test('fetches a blockchain wallet by id', async () => {
     mockResponse.body = { id: 'bw_1' }
-    await resources.getBlockchainWallet('bw_1', { receiverId: 're_xyz', json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/blockchain-wallets/bw_1`)
+    await resources.getBlockchainWallet('bw_1', { customerId: 'cu_xyz', json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/blockchain-wallets/bw_1`)
   })
 
-  test('creates a blockchain wallet for a receiver', async () => {
+  test('creates a blockchain wallet for a customer', async () => {
     mockResponse.body = { id: 'bw_new', network: 'base' }
     await resources.createBlockchainWallet({
-      receiverId: 're_xyz',
+      customerId: 'cu_xyz',
       address: '0xabc',
       network: 'base',
       json: true,
     })
     expect(lastCall().method).toBe('POST')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/blockchain-wallets`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/blockchain-wallets`)
     expect(lastCall().body).toEqual({
-      address: '0xabc',
       network: 'base',
       name: 'CLI Blockchain Wallet',
-      external_id: null,
+      address: '0xabc',
     })
+  })
+
+  test('omits address from body when not provided', async () => {
+    mockResponse.body = { id: 'bw_new', network: 'base' }
+    await resources.createBlockchainWallet({ customerId: 'cu_xyz', network: 'base', json: true })
+    expect(lastCall().body).toEqual({ network: 'base', name: 'CLI Blockchain Wallet' })
   })
 
   test('deletes a blockchain wallet', async () => {
     mockResponse.body = { success: true }
-    await resources.deleteBlockchainWallet('bw_1', { receiverId: 're_xyz', json: true })
+    await resources.deleteBlockchainWallet('bw_1', { customerId: 'cu_xyz', json: true })
     expect(lastCall().method).toBe('DELETE')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/blockchain-wallets/bw_1`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/blockchain-wallets/bw_1`)
+  })
+
+  test('fetches the sign-message for a customer blockchain wallet', async () => {
+    mockResponse.body = { message: 'Sign this: abc123' }
+    await resources.getBlockchainWalletSignMessage({ customerId: 'cu_xyz', json: true })
+    expect(lastCall().method).toBe('GET')
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/blockchain-wallets/sign-message`)
   })
 })
 
@@ -515,18 +542,48 @@ describe('Virtual Accounts', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('lists virtual accounts for a receiver', async () => {
+  test('lists virtual accounts for a customer', async () => {
     mockResponse.body = []
-    await resources.listVirtualAccounts({ receiverId: 're_xyz', json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/virtual-accounts`)
+    await resources.listVirtualAccounts({ customerId: 'cu_xyz', json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/virtual-accounts`)
   })
 
-  test('creates a virtual account for a receiver', async () => {
+  test('creates a virtual account for a customer', async () => {
     mockResponse.body = { id: 'va_new' }
-    await resources.createVirtualAccount({ receiverId: 're_xyz', blockchainWalletId: 'bw_1', json: true })
+    await resources.createVirtualAccount({
+      customerId: 'cu_xyz',
+      bankingPartner: 'jpmorgan',
+      token: 'USDC',
+      blockchainWalletId: 'bw_1',
+      json: true,
+    })
     expect(lastCall().method).toBe('POST')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/virtual-accounts`)
-    expect(lastCall().body).toEqual({ blockchain_wallet_id: 'bw_1' })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/virtual-accounts`)
+    expect(lastCall().body).toEqual({
+      banking_partner: 'jpmorgan',
+      token: 'USDC',
+      blockchain_wallet_id: 'bw_1',
+    })
+  })
+
+  test('fetches a virtual account by id', async () => {
+    mockResponse.body = { id: 'va_1' }
+    await resources.getVirtualAccount('va_1', { customerId: 'cu_xyz', json: true })
+    expect(lastCall().method).toBe('GET')
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/virtual-accounts/va_1`)
+  })
+
+  test('updates a virtual account', async () => {
+    mockResponse.body = { success: true }
+    await resources.updateVirtualAccount('va_1', {
+      customerId: 'cu_xyz',
+      token: 'USDT',
+      blockchainWalletId: 'bw_2',
+      json: true,
+    })
+    expect(lastCall().method).toBe('PUT')
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/virtual-accounts/va_1`)
+    expect(lastCall().body).toEqual({ token: 'USDT', blockchain_wallet_id: 'bw_2' })
   })
 })
 
@@ -536,8 +593,40 @@ describe('Offramp Wallets', () => {
 
   test('lists offramp wallets for a bank account', async () => {
     mockResponse.body = []
-    await resources.listOfframpWallets({ receiverId: 're_xyz', bankAccountId: 'ba_1', json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/bank-accounts/ba_1/offramp-wallets`)
+    await resources.listOfframpWallets({ customerId: 'cu_xyz', bankAccountId: 'ba_1', json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/bank-accounts/ba_1/offramp-wallets`)
+  })
+
+  test('creates an offramp wallet', async () => {
+    mockResponse.body = { id: 'ow_new', network: 'base', address: '0xabc' }
+    await resources.createOfframpWallet({
+      customerId: 'cu_xyz',
+      bankAccountId: 'ba_1',
+      network: 'base',
+      json: true,
+    })
+    expect(lastCall().method).toBe('POST')
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/bank-accounts/ba_1/offramp-wallets`)
+    expect(lastCall().body).toEqual({ network: 'base' })
+  })
+
+  test('creates an offramp wallet with external_id', async () => {
+    mockResponse.body = { id: 'ow_new', network: 'base', address: '0xabc' }
+    await resources.createOfframpWallet({
+      customerId: 'cu_xyz',
+      bankAccountId: 'ba_1',
+      network: 'base',
+      externalId: 'ext-1',
+      json: true,
+    })
+    expect(lastCall().body).toEqual({ network: 'base', external_id: 'ext-1' })
+  })
+
+  test('fetches an offramp wallet by id', async () => {
+    mockResponse.body = { id: 'ow_1' }
+    await resources.getOfframpWallet('ow_1', { customerId: 'cu_xyz', bankAccountId: 'ba_1', json: true })
+    expect(lastCall().method).toBe('GET')
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/bank-accounts/ba_1/offramp-wallets/ow_1`)
   })
 })
 
@@ -564,6 +653,14 @@ describe('Instances', () => {
     expect(lastCall().url).toBe(`${BASE}`)
     expect(lastCall().body).toEqual({ name: 'New' })
   })
+
+  test('migrates instance ownership to a new user', async () => {
+    mockResponse.body = { success: true }
+    await resources.migrateInstanceOwnership({ userId: 'usr_123', json: true })
+    expect(lastCall().method).toBe('POST')
+    expect(lastCall().url).toBe(`${BASE}/ownership`)
+    expect(lastCall().body).toEqual({ user_id: 'usr_123' })
+  })
 })
 
 describe('Available', () => {
@@ -587,49 +684,49 @@ describe('Wallets (custodial)', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
 
-  test('lists custodial wallets for a receiver', async () => {
+  test('lists custodial wallets for a customer', async () => {
     mockResponse.body = []
-    await resources.listWallets({ receiverId: 're_xyz', json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/wallets`)
+    await resources.listWallets({ customerId: 'cu_xyz', json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/wallets`)
   })
 
   test('fetches a custodial wallet by id', async () => {
     mockResponse.body = { id: 'bl_1' }
-    await resources.getWallet('bl_1', { receiverId: 're_xyz', json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/wallets/bl_1`)
+    await resources.getWallet('bl_1', { customerId: 'cu_xyz', json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/wallets/bl_1`)
   })
 
   test('fetches a custodial wallet balance', async () => {
     mockResponse.body = { USDC: { amount: 0 } }
-    await resources.getWalletBalance('bl_1', { receiverId: 're_xyz', json: true })
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/wallets/bl_1/balance`)
+    await resources.getWalletBalance('bl_1', { customerId: 'cu_xyz', json: true })
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/wallets/bl_1/balance`)
   })
 
   test('creates a custodial wallet with --external-id', async () => {
     mockResponse.body = { id: 'bl_new', network: 'polygon' }
     await resources.createWallet({
-      receiverId: 're_xyz',
+      customerId: 'cu_xyz',
       network: 'polygon',
       name: 'Main',
       externalId: 'ext-1',
       json: true,
     })
     expect(lastCall().method).toBe('POST')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/wallets`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/wallets`)
     expect(lastCall().body).toEqual({ network: 'polygon', name: 'Main', external_id: 'ext-1' })
   })
 
   test('omits external_id from the body when --external-id is not passed', async () => {
     mockResponse.body = { id: 'bl_new', network: 'polygon' }
-    await resources.createWallet({ receiverId: 're_xyz', network: 'polygon', name: 'Main', json: true })
+    await resources.createWallet({ customerId: 'cu_xyz', network: 'polygon', name: 'Main', json: true })
     expect(lastCall().body).toEqual({ network: 'polygon', name: 'Main' })
   })
 
   test('deletes a custodial wallet', async () => {
     mockResponse.body = { success: true }
-    await resources.deleteWallet('bl_1', { receiverId: 're_xyz', json: true })
+    await resources.deleteWallet('bl_1', { customerId: 'cu_xyz', json: true })
     expect(lastCall().method).toBe('DELETE')
-    expect(lastCall().url).toBe(`${BASE}/receivers/re_xyz/wallets/bl_1`)
+    expect(lastCall().url).toBe(`${BASE}/customers/cu_xyz/wallets/bl_1`)
   })
 })
 
@@ -778,6 +875,14 @@ describe('Upload', () => {
 
     expect(lastCall().url).toBe('https://api.blindpay.com/v1/upload?instance_id=in_override')
   })
+
+  test('analyzes a document via POST /v1/upload/analyze', async () => {
+    mockResponse.body = { approval_rate: 'high', description: 'Clear document' }
+    await resources.analyzeDocument({ body: '{"file_url":"https://example.com/doc.pdf"}', json: true })
+    expect(lastCall().method).toBe('POST')
+    expect(lastCall().url).toBe('https://api.blindpay.com/v1/upload/analyze')
+    expect(lastCall().body).toEqual({ file_url: 'https://example.com/doc.pdf' })
+  })
 })
 
 describe('Error handling', () => {
@@ -785,13 +890,13 @@ describe('Error handling', () => {
   afterEach(teardownTestEnv)
 
   test('exits with code 2 and emits a JSON error payload on a non-2xx response', async () => {
-    mockResponse = { status: 404, body: { message: 'receiver not found', errors: [] } }
-    await expect(resources.getReceiver('re_xyz', { json: true })).rejects.toThrow('__test_exit__2')
+    mockResponse = { status: 404, body: { message: 'customer not found', errors: [] } }
+    await expect(resources.getCustomer('cu_xyz', { json: true })).rejects.toThrow('__test_exit__2')
     expect(lastJsonLog()).toMatchObject({
       error: true,
       exitCode: 2,
       statusCode: 404,
-      message: 'receiver not found',
+      message: 'customer not found',
     })
   })
 
@@ -803,7 +908,7 @@ describe('Error handling', () => {
         errors: [{ path: ['email'], message: 'required' }],
       },
     }
-    await expect(resources.createReceiver({ email: 'x', json: true })).rejects.toThrow('__test_exit__2')
+    await expect(resources.createCustomer({ email: 'x', kycType: 'standard', json: true })).rejects.toThrow('__test_exit__2')
     expect(lastJsonLog()).toMatchObject({
       error: true,
       exitCode: 2,
