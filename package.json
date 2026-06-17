@@ -1,7 +1,7 @@
 {
   "name": "@blindpay/cli",
   "type": "module",
-  "version": "0.3.0",
+  "version": "0.2.0",
   "description": "Blindpay CLI - manage receivers, bank accounts, payouts, payins, and more from the terminal",
   "license": "MIT",
   "author": "Blindpay <gabriel@blindpay.com> (https://blindpay.com/)",
