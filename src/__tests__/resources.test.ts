@@ -239,6 +239,48 @@ describe('Bank Accounts', () => {
     })
   })
 
+  test('creates a sepa bank account with the full sepa_beneficiary_* field set', async () => {
+    mockResponse.body = { id: 'ba_sepa', type: 'sepa' }
+    await resources.createBankAccount({
+      customerId: 're_xyz',
+      type: 'sepa',
+      accountClass: 'individual',
+      sepaIban: 'DE89370400440532013000',
+      sepaBeneficiaryBic: 'COBADEFFXXX',
+      sepaBeneficiaryLegalName: 'Jane Doe',
+      sepaBeneficiaryAddressLine1: 'Hauptstrasse 1',
+      sepaBeneficiaryAddressLine2: 'Apt 2',
+      sepaBeneficiaryCity: 'Berlin',
+      sepaBeneficiaryStateProvinceRegion: 'BE',
+      sepaBeneficiaryPostalCode: '10115',
+      sepaBeneficiaryCountry: 'DE',
+      json: true,
+    })
+    expect(lastCall().method).toBe('POST')
+    expect(lastCall().url).toBe(`${BASE}/customers/re_xyz/bank-accounts`)
+    expect(lastCall().body).toEqual({
+      type: 'sepa',
+      name: 'CLI Bank Account',
+      recipient_relationship: null,
+      pix_key: null,
+      beneficiary_name: null,
+      routing_number: null,
+      account_number: null,
+      account_type: null,
+      account_class: 'individual',
+      country: null,
+      sepa_iban: 'DE89370400440532013000',
+      sepa_beneficiary_bic: 'COBADEFFXXX',
+      sepa_beneficiary_legal_name: 'Jane Doe',
+      sepa_beneficiary_address_line_1: 'Hauptstrasse 1',
+      sepa_beneficiary_address_line_2: 'Apt 2',
+      sepa_beneficiary_city: 'Berlin',
+      sepa_beneficiary_state_province_region: 'BE',
+      sepa_beneficiary_postal_code: '10115',
+      sepa_beneficiary_country: 'DE',
+    })
+  })
+
   test('deletes a bank account', async () => {
     mockResponse.body = { success: true }
     await resources.deleteBankAccount('ba_1', { customerId: 're_xyz', json: true })

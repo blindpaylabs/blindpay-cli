@@ -256,6 +256,12 @@ export async function createBankAccount(options: {
   sepaIban?: string
   sepaBeneficiaryBic?: string
   sepaBeneficiaryLegalName?: string
+  sepaBeneficiaryAddressLine1?: string
+  sepaBeneficiaryAddressLine2?: string
+  sepaBeneficiaryCity?: string
+  sepaBeneficiaryStateProvinceRegion?: string
+  sepaBeneficiaryPostalCode?: string
+  sepaBeneficiaryCountry?: string
   json: boolean
 }) {
   try {
@@ -275,6 +281,12 @@ export async function createBankAccount(options: {
     if (options.sepaIban) body.sepa_iban = options.sepaIban
     if (options.sepaBeneficiaryBic) body.sepa_beneficiary_bic = options.sepaBeneficiaryBic
     if (options.sepaBeneficiaryLegalName) body.sepa_beneficiary_legal_name = options.sepaBeneficiaryLegalName
+    if (options.sepaBeneficiaryAddressLine1) body.sepa_beneficiary_address_line_1 = options.sepaBeneficiaryAddressLine1
+    if (options.sepaBeneficiaryAddressLine2) body.sepa_beneficiary_address_line_2 = options.sepaBeneficiaryAddressLine2
+    if (options.sepaBeneficiaryCity) body.sepa_beneficiary_city = options.sepaBeneficiaryCity
+    if (options.sepaBeneficiaryStateProvinceRegion) body.sepa_beneficiary_state_province_region = options.sepaBeneficiaryStateProvinceRegion
+    if (options.sepaBeneficiaryPostalCode) body.sepa_beneficiary_postal_code = options.sepaBeneficiaryPostalCode
+    if (options.sepaBeneficiaryCountry) body.sepa_beneficiary_country = options.sepaBeneficiaryCountry
     const ba = await apiPost<{ id: string, type: string }>(ctx, `${instancePath(ctx)}/customers/${options.customerId}/bank-accounts`, body)
     clack.log.success(`Created bank account ${ba.id} (${ba.type})`)
     if (options.json)
