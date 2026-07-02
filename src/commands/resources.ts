@@ -645,49 +645,6 @@ export async function deletePartnerFee(id: string, options: { json?: boolean } =
   }
 }
 
-// API Keys
-export async function listApiKeys(options: { json: boolean }) {
-  try {
-    const ctx = resolveContext()
-    const res = await apiGet<unknown>(ctx, `${instancePath(ctx)}/api-keys`)
-    const list = extractList(res)
-    const maskKey = (s: string | null) => (!s ? '-' : s.length > 8 ? `${s.slice(0, 4)}...${s.slice(-4)}` : '***')
-    const display = list.map((k: any) => ({ id: k.id, name: k.name, key: maskKey(k.key), permission: k.permission }))
-    printResult(options.json ? list : display, options.json, ['id', 'name', 'key', 'permission'])
-  }
-  catch (e) {
-    handleApiError(e, options.json)
-  }
-}
-
-export async function createApiKey(options: { name?: string, permission?: string, json: boolean }) {
-  try {
-    const ctx = resolveContext()
-    const body: Record<string, string> = { name: options.name || 'CLI API Key' }
-    if (options.permission) body.permission = options.permission
-    const key = await apiPost<{ id: string, key: string }>(ctx, `${instancePath(ctx)}/api-keys`, body)
-    clack.log.success(`Created API key ${key.id}`)
-    clack.log.warning(`Secret: ${key.key}`)
-    clack.log.message('Save this key now — it will not be shown again.')
-    if (options.json)
-      console.log(formatOutput(key, true))
-  }
-  catch (e) {
-    handleApiError(e, options.json)
-  }
-}
-
-export async function deleteApiKey(id: string, options: { json?: boolean } = {}) {
-  try {
-    const ctx = resolveContext()
-    await apiDelete(ctx, `${instancePath(ctx)}/api-keys/${id}`)
-    clack.log.success(`Deleted API key ${id}`)
-  }
-  catch (e) {
-    handleApiError(e, options.json)
-  }
-}
-
 // Virtual Accounts
 export async function listVirtualAccounts(options: { customerId: string, json: boolean }) {
   try {
