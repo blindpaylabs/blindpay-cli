@@ -36,9 +36,6 @@ import {
   listPartnerFees,
   createPartnerFee,
   deletePartnerFee,
-  listApiKeys,
-  createApiKey,
-  deleteApiKey,
   listVirtualAccounts,
   createVirtualAccount,
   getVirtualAccount,
@@ -516,34 +513,6 @@ partnerFees
   .description('Delete a partner fee')
   .option('--json', 'Output as JSON', false)
   .action((id, opts) => deletePartnerFee(id, opts))
-
-// ── API Keys ────────────────────────────────────────────────────────────
-const apiKeys = program.command('api_keys').description('Manage API keys')
-  .addHelpText('after', `
-Examples:
-  $ blindpay api_keys list
-  $ blindpay api_keys create --name "Production Key"
-  $ blindpay api_keys delete <id>`)
-
-apiKeys
-  .command('list')
-  .description('List API keys')
-  .option('--json', 'Output as JSON', false)
-  .action(opts => listApiKeys(opts))
-
-apiKeys
-  .command('create')
-  .description('Create an API key')
-  .option('--name <name>', 'Key name', 'CLI API Key')
-  .option('--permission <permission>', 'Permission level')
-  .option('--json', 'Output as JSON', false)
-  .action(opts => createApiKey(opts))
-
-apiKeys
-  .command('delete <id>')
-  .description('Delete an API key')
-  .option('--json', 'Output as JSON', false)
-  .action((id, opts) => deleteApiKey(id, opts))
 
 // ── Virtual Accounts ────────────────────────────────────────────────────
 const virtualAccounts = program.command('virtual_accounts').description('Manage virtual accounts')

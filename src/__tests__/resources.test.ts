@@ -555,32 +555,6 @@ describe('Partner Fees', () => {
   })
 })
 
-describe('API Keys', () => {
-  beforeEach(setupTestEnv)
-  afterEach(teardownTestEnv)
-
-  test('lists API keys', async () => {
-    mockResponse.body = []
-    await resources.listApiKeys({ json: true })
-    expect(lastCall().url).toBe(`${BASE}/api-keys`)
-  })
-
-  test('creates an API key', async () => {
-    mockResponse.body = { id: 'ak_new', key: 'sk_...' }
-    await resources.createApiKey({ name: 'test', permission: 'read', json: true })
-    expect(lastCall().method).toBe('POST')
-    expect(lastCall().url).toBe(`${BASE}/api-keys`)
-    expect(lastCall().body).toEqual({ name: 'test', permission: 'read' })
-  })
-
-  test('deletes an API key', async () => {
-    mockResponse.body = { success: true }
-    await resources.deleteApiKey('ak_1', { json: true })
-    expect(lastCall().method).toBe('DELETE')
-    expect(lastCall().url).toBe(`${BASE}/api-keys/ak_1`)
-  })
-})
-
 describe('Virtual Accounts', () => {
   beforeEach(setupTestEnv)
   afterEach(teardownTestEnv)
