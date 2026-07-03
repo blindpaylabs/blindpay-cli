@@ -158,15 +158,6 @@ const schemas: ResourceSchema[] = [
     },
   },
   {
-    resource: 'api_keys',
-    commands: ['list', 'create', 'delete'],
-    create: {
-      fields: [
-        { name: 'name', type: 'string', required: false, description: 'API key name', default: 'CLI API Key' },
-      ],
-    },
-  },
-  {
     resource: 'virtual_accounts',
     commands: ['list', 'create'],
     create: {
