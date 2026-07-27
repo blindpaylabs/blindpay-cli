@@ -41,8 +41,8 @@
     "dev": "bun run src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target node --minify && node -e \"const fs=require('fs');const f='dist/index.js';const c=fs.readFileSync(f,'utf8');fs.writeFileSync(f,'#!/usr/bin/env node\\n'+c);fs.chmodSync(f,0o755)\"",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint -c oxlint.json src/",
-    "lint:fix": "oxlint -c oxlint.json --fix src/",
+    "lint": "oxlint -c oxlint.json src/ scripts/",
+    "lint:fix": "oxlint -c oxlint.json --fix src/ scripts/",
     "test": "bun test",
     "prepublishOnly": "bun run build"
   },

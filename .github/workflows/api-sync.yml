@@ -55,76 +55,63 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Apply changes with Claude Code
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: '--model claude-opus-5 --allowedTools "Bash(*),Read,Edit,Write,Glob,Grep"'
-          prompt: |
-            You are updating this CLI to match BlindPay API changes.
+      # The entire "what changed, and can this repo express it without a
+      # human" decision is a pure script: scripts/api-sync/generate.ts. It
+      # parses the changelog, classifies every change as either mechanically
+      # applicable (an additive request-body field on a known resource path)
+      # or needs-human, applies only the former, and bumps package.json's
+      # version. No LLM, no best-guessing: an unrecognized changelog shape
+      # makes the parser throw and this step fails the run.
+      - name: Run deterministic generator
+        id: generate
+        run: |
+          set -o pipefail
+          bun scripts/api-sync/generate.ts \
+            --changelog /tmp/api-sync/changelog.md \
+            --repo-root . \
+            | tee /tmp/api-sync/generate.log
 
-            Read CLAUDE.md in this repo first — it describes the file
-            layout, command naming conventions, output patterns, and the
-            decision rules for translating API changes into CLI changes.
+          SUMMARY_JSON=$(grep '^SUMMARY_JSON:' /tmp/api-sync/generate.log | tail -1 | sed 's/^SUMMARY_JSON://')
+          echo "$SUMMARY_JSON" > /tmp/api-sync/summary.json
+          echo "summary_path=/tmp/api-sync/summary.json" >> "$GITHUB_OUTPUT"
+          echo "has_changes=$(jq -r '.hasChanges' /tmp/api-sync/summary.json)" >> "$GITHUB_OUTPUT"
+          echo "can_automerge=$(jq -r '.canAutoMerge' /tmp/api-sync/summary.json)" >> "$GITHUB_OUTPUT"
+          echo "needs_human_count=$(jq -r '.needsHumanCount' /tmp/api-sync/summary.json)" >> "$GITHUB_OUTPUT"
+          echo "bump_type=$(jq -r '.bumpType' /tmp/api-sync/summary.json)" >> "$GITHUB_OUTPUT"
 
-            The changelog is at /tmp/api-sync/changelog.md. It is the
-            authoritative list of API changes since the last sync.
+      # A changelog can contain ONLY changes the generator cannot express
+      # (new endpoint, removed field, enum-only, etc.) with nothing
+      # mechanically applicable. There is then no code diff to commit and no
+      # PR to open — but staying silent would bury a real API change a human
+      # needs to see, so this opens an issue instead.
+      - name: Open an issue when nothing was applicable but something needs a human
+        if: steps.generate.outputs.has_changes == 'false' && steps.generate.outputs.needs_human_count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "The latest API changelog contains changes this repo's deterministic"
+            echo "api-sync generator (\`scripts/api-sync/\`) cannot express. Nothing was"
+            echo "applied or committed. A human needs to decide the CLI surface for:"
+            echo
+            jq -r '.needsHuman[] | "- " + .' /tmp/api-sync/summary.json
+          } > /tmp/api-sync/issue-body.md
+          gh issue create \
+            --title "api-sync: API changes need human review (no automatic changes applied)" \
+            --body-file /tmp/api-sync/issue-body.md \
+            --label api-sync
 
-            Process:
-            1. Read CLAUDE.md thoroughly.
-            2. Read /tmp/api-sync/changelog.md.
-            3. For each change, apply the decision rules in CLAUDE.md
-               (section "Sync workflow conventions"). Skip changes that
-               don't map to any CLI surface — silence is fine.
-            4. Implement the chosen changes:
-                 - New commands: add the action function to
-                   src/commands/resources.ts and wire it into
-                   src/index.ts under the right group banner.
-                 - New flags: add to the option list in src/index.ts and
-                   pass through to the action in src/commands/resources.ts.
-                 - Removed endpoints: remove the command and the action.
-                 - Enum changes: only update help text in src/index.ts.
-                 - Dynamic / arbitrary-object request bodies (e.g.
-                   `Record<string, any>` or `z.record(z.string(),
-                   z.any())`): do NOT ship the command with an empty
-                   `{}` body and a TODO. Accept the body as a single
-                   `--body <json>` flag, parse with `JSON.parse`, and
-                   call `exitWithError` on a parse failure. Use
-                   `--body` (not `--response`, `--payload`, etc.) for
-                   consistency across commands. See the
-                   "Dynamic request bodies" section in CLAUDE.md for
-                   the exact pattern.
-                 - Do NOT leave `// TODO(api-sync):` markers in shipped
-                   commands. Use the JSON-string fallback above instead
-                   of TODOs. TODOs are only acceptable for low-signal
-                   cleanups (e.g. column tuning).
-            5. Update src/__tests__/resources.test.ts to match. For every
-               action you added: add at least one happy-path test
-               asserting the URL, method, and body. For every action you
-               modified: update the existing test's expected body/URL.
-               For every action you removed: remove its test. Follow the
-               existing pattern (setupTestEnv/teardownTestEnv, lastCall(),
-               mockResponse.body). See the "Testing" section of CLAUDE.md.
-               **Place new tests inside the existing `describe(...)`
-               block that matches the command's top-level CLI group** —
-               a `receivers submit_rfi` test goes in
-               `describe('Receivers', ...)`, not in a new
-               `describe('RFI', ...)`. Only create a new describe block
-               when introducing a brand-new top-level CLI group.
-            6. Bump the `version` field in package.json (patch for
-               additive changes, minor if anything was removed).
-               CLI_VERSION is derived from package.json at build time —
-               do not edit src/utils/constants.ts for version bumps.
-            7. Run `bun run typecheck`, `bun run lint:fix`, and
-               `bun run test`. Fix any errors until all three are clean.
-            8. Do NOT touch .github/workflows/.
-            9. Do NOT create commits — leave changes in the working tree.
-
-            If a change is ambiguous, leave a TODO comment with
-            `// TODO(api-sync):` so a human reviewer can address it.
+      - name: Run CI checks against the generated changes
+        if: steps.generate.outputs.has_changes == 'true'
+        run: |
+          bun run typecheck
+          bun run lint
+          bun test
+          bun run build
 
       - name: Commit and push
         id: commit
+        if: steps.generate.outputs.has_changes == 'true'
         run: |
           git remote set-url origin "https://x-access-token:${{ secrets.SDK_SYNC_PAT }}@github.com/${{ github.repository }}.git"
           git checkout -- .github/workflows/ 2>/dev/null || true
@@ -132,17 +119,38 @@ jobs:
           git reset HEAD .github/workflows/ 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "committed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "has_changes=true" >> $GITHUB_OUTPUT
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "feat: sync CLI with API changes"
           git push --force-with-lease origin api-sync
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Write PR body
+        id: pr-body
+        if: steps.commit.outputs.committed == 'true'
+        run: |
+          {
+            echo "Automated, script-generated CLI update from API changes."
+            echo "No LLM was involved in producing this diff — see \`scripts/api-sync/\` in this repo."
+            echo
+            echo "### Applied automatically"
+            jq -r '.applied[] | "- " + .' /tmp/api-sync/summary.json
+            NEEDS_HUMAN_COUNT=$(jq -r '.needsHumanCount' /tmp/api-sync/summary.json)
+            if [ "$NEEDS_HUMAN_COUNT" != "0" ]; then
+              echo
+              echo "### Needs a human — NOT applied, NOT auto-merged"
+              jq -r '.needsHuman[] | "- " + .' /tmp/api-sync/summary.json
+            fi
+            echo
+            echo "Version bump: \`$(jq -r '.bumpType' /tmp/api-sync/summary.json)\`"
+          } > /tmp/api-sync/pr-body.md
 
       - name: Create or update PR
-        if: steps.commit.outputs.has_changes == 'true'
+        id: pr
+        if: steps.commit.outputs.committed == 'true'
         env:
           GH_TOKEN: ${{ secrets.SDK_SYNC_PAT }}
         run: |
@@ -150,12 +158,30 @@ jobs:
 
           if [ -n "$EXISTING_PR" ]; then
             echo "Updating existing PR #$EXISTING_PR"
-            gh pr comment "$EXISTING_PR" --body "Updated with latest API changes."
+            gh pr comment "$EXISTING_PR" --body-file /tmp/api-sync/pr-body.md
+            PR_NUMBER="$EXISTING_PR"
           else
             gh pr create \
               --title "feat: sync CLI with API changes" \
-              --body "Automated CLI update from API changes." \
+              --body-file /tmp/api-sync/pr-body.md \
               --base main \
               --head api-sync \
               --label api-sync
+            PR_NUMBER=$(gh pr list --head api-sync --json number --jq '.[0].number')
+          fi
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      # Auto-merge only when the generator reports nothing was left for a
+      # human to decide. A needs-human PR stays open for manual review and is
+      # never auto-merged — this is the honest-failure path, not an error.
+      - name: Auto-merge or flag for human review
+        if: steps.commit.outputs.committed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SDK_SYNC_PAT }}
+        run: |
+          PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
+          if [ "${{ steps.generate.outputs.can_automerge }}" = "true" ]; then
+            gh pr merge "$PR_NUMBER" --auto --squash
+          else
+            gh pr comment "$PR_NUMBER" --body "Auto-merge NOT enabled: this changelog contains ${{ steps.generate.outputs.needs_human_count }} change(s) the generator cannot express (see the needs-human section above). A human needs to review and merge this manually."
           fi
