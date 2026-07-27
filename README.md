@@ -57,36 +57,39 @@ Every command supports `--help` for detailed usage and `--json` for machine-read
 | `blindpay instances update` | Update instance name or redirect URL |
 | `blindpay instances members list` | List instance members |
 
-### Receivers
+### Customers
 
 | Command | Description |
 |---|---|
-| `blindpay receivers list` | List all receivers |
-| `blindpay receivers get <id>` | Get a receiver by ID |
-| `blindpay receivers create` | Create a new receiver |
-| `blindpay receivers update <id>` | Update a receiver |
-| `blindpay receivers delete <id>` | Delete a receiver |
-| `blindpay receivers limits <id>` | Get receiver limits |
-| `blindpay receivers limits_increase_requests <id>` | Get limits increase requests |
+| `blindpay customers list` | List all customers |
+| `blindpay customers get <id>` | Get a customer by ID |
+| `blindpay customers create` | Create a new customer |
+| `blindpay customers update <id>` | Update a customer |
+| `blindpay customers delete <id>` | Delete a customer |
+| `blindpay customers limits <id>` | Get customer limits |
+| `blindpay customers limits_increase_requests <id>` | Get customer limit-increase requests |
+| `blindpay customers create_limit_increase <id>` | Request a limit increase for a customer |
+| `blindpay customers rfi_get <id>` | Get the open RFI for a customer |
+| `blindpay customers rfi_submit <id>` | Submit an RFI response for a customer |
 
 ### Bank Accounts
 
-Requires `--receiver-id` on every command.
+Requires `--customer-id` on every command.
 
 | Command | Description |
 |---|---|
-| `blindpay bank_accounts list` | List bank accounts for a receiver |
+| `blindpay bank_accounts list` | List bank accounts for a customer |
 | `blindpay bank_accounts get <id>` | Get a bank account by ID |
 | `blindpay bank_accounts create` | Create a new bank account |
 | `blindpay bank_accounts delete <id>` | Delete a bank account |
 
 ### Blockchain Wallets
 
-Requires `--receiver-id` on every command.
+Requires `--customer-id` on every command.
 
 | Command | Description |
 |---|---|
-| `blindpay blockchain_wallets list` | List blockchain wallets for a receiver |
+| `blindpay blockchain_wallets list` | List blockchain wallets for a customer |
 | `blindpay blockchain_wallets get <id>` | Get a blockchain wallet by ID |
 | `blindpay blockchain_wallets create` | Create a new blockchain wallet |
 | `blindpay blockchain_wallets delete <id>` | Delete a blockchain wallet |
@@ -113,18 +116,18 @@ Requires `--receiver-id` on every command.
 
 ### Virtual Accounts
 
-Requires `--receiver-id` on every command.
+Requires `--customer-id` on every command.
 
 | Command | Description |
 |---|---|
-| `blindpay virtual_accounts list` | List virtual accounts for a receiver |
+| `blindpay virtual_accounts list` | List virtual accounts for a customer |
 | `blindpay virtual_accounts create` | Create a virtual account |
 
 ### Offramp Wallets
 
 | Command | Description |
 |---|---|
-| `blindpay offramp_wallets list` | List offramp wallets (`--receiver-id` + `--bank-account-id`) |
+| `blindpay offramp_wallets list` | List offramp wallets (`--customer-id` + `--bank-account-id`) |
 
 ### Webhook Endpoints
 
