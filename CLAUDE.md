@@ -63,7 +63,7 @@ src/
 
 1. Add an exported async function to `src/commands/resources.ts` (or a
    new module if it's a brand new resource). Naming pattern:
-   `<verb><Resource>` — `listReceivers`, `getPayout`, `createBankAccount`,
+   `<verb><Resource>`, e.g. `listCustomers`, `getPayout`, `createBankAccount`,
    `deleteWebhookEndpoint`.
 2. Wire it in `src/index.ts` under the appropriate `program.command(...)`
    group. Keep groups together with a banner comment
@@ -71,10 +71,10 @@ src/
 3. Add `--json` to any read-only command. Use `printResult(data, json,
    columns)` to render — pass meaningful columns for the default
    non-JSON output.
-4. Path params (e.g. `<id>`, `<receiver-id>`) are positional or
-   `--receiver-id <id>` flags depending on whether they belong to the
+4. Path params (e.g. `<id>`, `<customer-id>`) are positional or
+   `--customer-id <id>` flags depending on whether they belong to the
    primary resource being acted on. Look at how existing commands handle
-   parent IDs (bank_accounts uses `--receiver-id`).
+   parent IDs (bank_accounts uses `--customer-id`).
 5. Wrap all API calls with `try/catch` and route errors through
    `handleApiError(err, json)`.
 6. Use `parseAmount(...)` (already in resources.ts) for any amount field
@@ -86,9 +86,9 @@ src/
    include an extra test for any non-trivial body shaping
    (e.g. cents-scaling, optional-field omission, network-path branching).
    **Place the test inside the existing `describe(...)` block that
-   matches the command's top-level CLI group.** A `receivers submit_rfi`
-   command's test goes inside `describe('Receivers', ...)` alongside
-   `lists receivers` / `fetches a receiver by id` — not in a new
+   matches the command's top-level CLI group.** A `customers rfi_submit`
+   command's test goes inside `describe('Customers', ...)` alongside
+   `lists customers` / `fetches a customer by id`, not in a new
    `describe('RFI', ...)`. Only create a new describe block when you are
    introducing a brand-new top-level group (e.g. the first `transfers`
    command).
@@ -97,8 +97,8 @@ src/
 
 | API path                                              | Command                          |
 | ----------------------------------------------------- | -------------------------------- |
-| `GET /v1/instances/{id}/receivers`                    | `blindpay receivers list`        |
-| `POST /v1/instances/{id}/receivers/{rid}/bank-accounts` | `blindpay bank_accounts create`  |
+| `GET /v1/instances/{id}/customers`                    | `blindpay customers list`        |
+| `POST /v1/instances/{id}/customers/{cid}/bank-accounts` | `blindpay bank_accounts create`  |
 | `GET /v1/available/...`                               | `blindpay available rails`       |
 
 Group names use `snake_case` (matching the API resource name with
@@ -132,8 +132,8 @@ do **not** ship a command with an empty `{}` body and a TODO. Accept
 the body as a single `--body <json>` flag and parse it. Pattern:
 
 ```ts
-export async function submitReceiverRfi(
-  receiverId: string,
+export async function submitCustomerRfi(
+  customerId: string,
   options: { body: string; json: boolean },
 ) {
   let body: Record<string, unknown>
@@ -145,7 +145,7 @@ export async function submitReceiverRfi(
     const ctx = resolveContext()
     const res = await apiPost<{ success: boolean }>(
       ctx,
-      `${instancePath(ctx)}/receivers/${receiverId}/rfi`,
+      `${instancePath(ctx)}/customers/${customerId}/rfi`,
       body,
     )
     clack.log.success('RFI response submitted')
@@ -156,7 +156,7 @@ export async function submitReceiverRfi(
 ```
 
 The user constructs the body shape on the command line:
-`blindpay receivers submit_rfi re_xyz --body '{"address":"..."}'`.
+`blindpay customers rfi_submit re_xyz --body '{"address":"..."}'`.
 
 Use `--body` as the standard flag name for all dynamic-body endpoints.
 Don't pick a semantically-flavored name like `--response` or
