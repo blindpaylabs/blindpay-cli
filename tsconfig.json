@@ -15,6 +15,6 @@
     "isolatedModules": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "package.json"],
+  "include": ["src/**/*", "scripts/**/*", "package.json"],
   "exclude": ["node_modules", "dist"]
 }

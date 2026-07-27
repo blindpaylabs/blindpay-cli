@@ -21,13 +21,69 @@ This CLI is auto-synced with the BlindPay API. When SDK-eligible
    from the OpenAPI spec diff and pushes it to this repo's
    `api-sync-data` branch at `.api-sync/changelog.md`. It then fires a
    `repository_dispatch` `api-sync` event.
-2. `api-sync.yml` consumes the event, runs Claude with the changelog as
-   input, and asks Claude to read this CLAUDE.md plus the codebase to
-   decide what (if any) CLI changes are needed.
-3. A PR is opened/updated on the `api-sync` branch for human review.
+2. `api-sync.yml` consumes the event and runs a pure script,
+   `scripts/api-sync/generate.ts` — no LLM, no `claude-code-action`. See
+   "The deterministic api-sync pipeline" below for what it does and does
+   not touch.
+3. If everything the changelog contains was mechanically applicable, the
+   PR auto-merges once CI passes. If any change needed a human, the PR
+   (or, if there was nothing applicable at all, a plain issue) stays open
+   for manual review and is never auto-merged.
 
 Note: not every API change needs a CLI change. The CLI is hand-curated
 UX — only commands a human would actually want to run from a terminal.
+
+## The deterministic api-sync pipeline
+
+`scripts/api-sync/generate.ts` is the only thing that runs in CI for a
+sync. It is a straight pipeline, in `scripts/api-sync/`:
+
+- `parse-changelog.ts` — parses the exact markdown format blindpay-v2's
+  `scripts/spec-diff.ts` emits into structured events (field added/removed,
+  enum changed, endpoint/method/schema added/removed). This is a format
+  parser, not a heuristic: an unrecognized bullet makes it throw rather
+  than silently drop content.
+- `known-resources.ts` — the generator's entire "what can I touch" map:
+  each entry pairs a `schema.ts` resource name with the OpenAPI path(s)
+  and the exact `src/commands/resources.ts` function name that build its
+  create/update request body. A path NOT listed here is unmappable by
+  construction. **Extending this map to a genuinely new resource is a
+  hand-written change to make deliberately** — the generator will never
+  infer it from a changelog.
+- `classify.ts` — splits parsed events into `applicable` (CAN be expressed
+  by the generator) and `needsHuman` (cannot). Today the CAN-express
+  surface is deliberately narrow: **an additive, optional field on the
+  REQUEST body of a create/update path listed in `known-resources.ts`.**
+  Everything else — removed fields, enum value changes, response-only
+  field changes, new/removed endpoints, methods, or schemas — is routed
+  to `needsHuman` with a plain-English reason, even where a human
+  historically handled it mechanically too (see the comment at the top of
+  `classify.ts` for why each of those categories isn't safe to script
+  today).
+- `apply.ts` — applies one field addition: adds `<field>?: <type>` to the
+  matching function's options type in `resources.ts` (anchored on its
+  `json?: boolean` prop), a pass-through statement before its
+  `apiPost</apiPut<` call, a new `--<field-kebab> <value>` option in
+  `index.ts` (anchored on that command's `--json` option), and a mirrored
+  `FieldDef` in `schema.ts`. Every insertion is anchor-based and
+  idempotent — re-running it against already-patched source is a no-op,
+  which is what makes the pipeline safe to re-run and byte-identical
+  across runs of the same input.
+- `version-bump.ts` — minor if the changelog added/removed any
+  endpoint, method, or enum value; patch otherwise. Scripted from the
+  parsed events, never guessed.
+- `generate.ts` — orchestrates all of the above, writes the patched
+  files plus the bumped `package.json` version, and prints a
+  `SUMMARY_JSON:` line the workflow reads to decide whether to run CI,
+  open a PR, and whether that PR is eligible for auto-merge.
+
+If the changelog contains ONLY changes the generator can't express, no
+files change and the workflow opens a plain GitHub issue listing them
+instead of a PR — there's no code diff to review, but staying silent
+would bury a real API change.
+
+Tests for the pipeline itself live in `scripts/api-sync/__tests__/` and
+run via the same `bun test` CI uses for the CLI's own tests.
 
 ## Project structure
 
@@ -192,34 +248,33 @@ recorded `url`/`method`/`body`. Error-path tests assert that the action
 throws `__test_exit__<code>` (the stubbed `process.exit` re-throws so
 the test runner sees the exit code).
 
-## Sync workflow conventions
+## Reviewing a needs-human api-sync PR or issue
 
-When responding to an api-sync event:
+`scripts/api-sync/generate.ts` (see "The deterministic api-sync
+pipeline" above) already applied everything it safely could. What's left
+in the PR/issue body's "Needs a human" section is exactly what it
+couldn't express. When picking one up by hand:
 
-1. Read `.api-sync/changelog.md`. It lists every API change since the
-   last sync.
-2. For each change, decide:
-   - **New endpoint** → Add a CLI command only if a terminal user is
-     plausibly going to run it. Usually yes for CRUD-style endpoints,
-     no for internal/read-only diagnostics. When in doubt, add it.
-   - **New field on an input** → Add a corresponding `--<field>` flag
-     to the command's option list and pass it through.
-   - **New field on an output** → Update the default `columns` array if
-     the field is interesting; don't add columns for low-signal fields.
-   - **Removed endpoint/field** → Remove the corresponding command/flag.
-   - **Enum value added** → Update help text only (CLI doesn't validate
-     enum values client-side).
-3. Add or update tests in `src/__tests__/resources.test.ts` for every
-   action you added or modified. New action → new happy-path test
-   (URL + method + body). Modified body shape → update the matching
-   test's expected body. Removed action → remove its test. See the
-   "Testing" section above for the helper pattern.
-4. Bump the `version` field in `package.json` — patch for additive
-   changes, minor if you removed anything. `CLI_VERSION` is derived
-   from `package.json` at build time; don't edit `constants.ts`.
-5. Run `bun run typecheck`, `bun run lint:fix`, and `bun run test`. Fix any errors.
-6. Do NOT touch `.github/workflows/`.
-7. Do NOT create commits — leave changes in the working tree.
+- **New endpoint** → Add a CLI command only if a terminal user is
+  plausibly going to run it. Usually yes for CRUD-style endpoints, no
+  for internal/read-only diagnostics. When in doubt, add it.
+- **New field on an input, on a path not in `known-resources.ts`** →
+  Add a corresponding `--<field>` flag to the command's option list and
+  pass it through. Consider also adding the path to
+  `scripts/api-sync/known-resources.ts` so future additions on it are
+  handled automatically.
+- **New field on an output** → Update the default `columns` array if
+  the field is interesting; don't add columns for low-signal fields.
+- **Removed endpoint/field** → Remove the corresponding command/flag.
+- **Enum value added** → Update help text only (CLI doesn't validate
+  enum values client-side).
+- Add or update tests in `src/__tests__/resources.test.ts` for every
+  action you add, modify, or remove by hand. See "Testing" above.
+- Bump the `version` field in `package.json` if you're adding to a PR
+  the generator already bumped — patch for additive changes, minor if
+  you removed anything.
+- Run `bun run typecheck`, `bun run lint:fix`, and `bun run test`.
 
-If a change in the changelog doesn't map to any CLI surface (e.g. a
-schema-only change with no field added), skip it silently.
+If a change in the changelog doesn't map to any CLI surface at all
+(e.g. a schema-only change with no field added), the generator already
+skipped it silently — that's expected, not a bug to report.
