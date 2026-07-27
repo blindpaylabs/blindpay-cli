@@ -60,7 +60,12 @@ describe('applySchemaField', () => {
   test('adds a FieldDef to the bank_accounts create fields array', () => {
     const change: ApplicableChange = { resource: 'bank_accounts', op: 'create', fn: 'createBankAccount', field: 'clabe', type: 'string', required: false }
     const patched = applySchemaField(real('src/commands/schema.ts'), change)
-    expect(patched).toContain("name: 'clabe'")
+    const inserted = patched.split('\n').find(l => l.includes("name: 'clabe'"))
+    expect(inserted).toBeDefined()
+    // The inserted line must sit at the same indent as its sibling FieldDefs, not at
+    // the shallower indent of the closing bracket it was anchored on.
+    const sibling = patched.split('\n').find(l => l.includes("name: '") && !l.includes('clabe'))
+    expect(inserted!.match(/^\s*/)![0]).toBe(sibling!.match(/^\s*/)![0])
   })
 
   test('is idempotent', () => {

@@ -24,13 +24,17 @@ function sliceToNextExport(src: string, startIdx: number): { text: string, end: 
   return { text: src.slice(startIdx, end), end }
 }
 
-function insertLineBefore(src: string, region: { start: number, end: number }, anchorRe: RegExp, newLine: (indent: string) => string): string {
+function insertLineBefore(src: string, region: { start: number, end: number }, anchorRe: RegExp, newLine: (indent: string) => string, opts?: { indentFromPreviousLine?: boolean }): string {
   const region_text = src.slice(region.start, region.end)
   const lines = region_text.split('\n')
   const idx = lines.findIndex(l => anchorRe.test(l))
   if (idx === -1)
     throw new Error(`apply: anchor ${anchorRe} not found in region`)
-  const indent = leadingWhitespace(lines[idx])
+  // A closing-bracket anchor sits 2 spaces shallower than the array elements, so an
+  // inserted sibling must take its indent from the element above, not the anchor.
+  const indent = opts?.indentFromPreviousLine && idx > 0 && lines[idx - 1].trim() !== ''
+    ? leadingWhitespace(lines[idx - 1])
+    : leadingWhitespace(lines[idx])
   lines.splice(idx, 0, newLine(indent))
   const patchedRegion = lines.join('\n')
   return src.slice(0, region.start) + patchedRegion + src.slice(region.end)
@@ -135,6 +139,7 @@ export function applySchemaField(src: string, change: ApplicableChange): string 
     { start: opMatch.index, end: resourceBlock.length },
     /^(\s*)\],\s*$/,
     newFieldLine,
+    { indentFromPreviousLine: true },
   )
 
   return src.slice(0, resourceMatch.index) + patchedBlock + src.slice(resourceEnd)
