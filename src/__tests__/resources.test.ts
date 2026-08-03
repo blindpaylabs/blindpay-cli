@@ -787,9 +787,9 @@ describe('Transfer Quotes', () => {
     await resources.createTransferQuote({
       walletId: 'bl_1',
       senderToken: 'USDC',
-      receiverWalletAddress: '0xabc',
-      receiverToken: 'USDC',
-      receiverNetwork: 'polygon',
+      customerWalletAddress: '0xabc',
+      customerToken: 'USDC',
+      customerNetwork: 'polygon',
       requestAmount: '1000',
       amountReference: 'sender',
       coverFees: true,
@@ -801,9 +801,9 @@ describe('Transfer Quotes', () => {
     expect(lastCall().body).toEqual({
       wallet_id: 'bl_1',
       sender_token: 'USDC',
-      receiver_wallet_address: '0xabc',
-      receiver_token: 'USDC',
-      receiver_network: 'polygon',
+      customer_wallet_address: '0xabc',
+      customer_token: 'USDC',
+      customer_network: 'polygon',
       request_amount: 1000,
       amount_reference: 'sender',
       cover_fees: true,
@@ -816,9 +816,9 @@ describe('Transfer Quotes', () => {
     await resources.createTransferQuote({
       walletId: 'bl_1',
       senderToken: 'USDC',
-      receiverWalletAddress: '0xabc',
-      receiverToken: 'USDC',
-      receiverNetwork: 'polygon',
+      customerWalletAddress: '0xabc',
+      customerToken: 'USDC',
+      customerNetwork: 'polygon',
       requestAmount: '1000',
       amountReference: 'sender',
       json: true,
@@ -846,7 +846,7 @@ describe('Terms of Service', () => {
     mockResponse.body = { url: 'https://app.blindpay.com/e/terms-of-service?...' }
     await resources.initiateTos({
       idempotencyKey: 'idem-1',
-      receiverId: 're_xyz',
+      customerId: 're_xyz',
       redirectUrl: 'https://example.com',
       json: true,
     })
@@ -854,12 +854,12 @@ describe('Terms of Service', () => {
     expect(lastCall().url).toBe('https://api.blindpay.com/v1/e/instances/in_testInstance/tos')
     expect(lastCall().body).toEqual({
       idempotency_key: 'idem-1',
-      receiver_id: 're_xyz',
+      customer_id: 're_xyz',
       redirect_url: 'https://example.com',
     })
   })
 
-  test('omits receiver_id and redirect_url from the body when not passed', async () => {
+  test('omits customer_id and redirect_url from the body when not passed', async () => {
     mockResponse.body = { url: 'https://...' }
     await resources.initiateTos({ idempotencyKey: 'idem-2', json: true })
     expect(lastCall().body).toEqual({ idempotency_key: 'idem-2' })
