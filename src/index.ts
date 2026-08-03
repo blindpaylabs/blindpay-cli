@@ -739,7 +739,7 @@ const transferQuotes = program.command('transfer_quotes').description('Manage tr
   .addHelpText('after', `
 Examples:
   $ blindpay transfer_quotes create --wallet-id <id> --sender-token USDC \\
-      --receiver-wallet-address 0x... --receiver-token USDC --receiver-network polygon \\
+      --customer-wallet-address 0x... --customer-token USDC --customer-network polygon \\
       --request-amount 1000 --amount-reference sender`)
 
 transferQuotes
@@ -747,9 +747,9 @@ transferQuotes
   .description('Create a transfer quote')
   .requiredOption('--wallet-id <id>', 'Sender wallet ID (bl_...)')
   .requiredOption('--sender-token <token>', 'Sender token (USDC, USDT, ...)')
-  .requiredOption('--receiver-wallet-address <addr>', 'Receiver wallet address')
-  .requiredOption('--receiver-token <token>', 'Receiver token')
-  .requiredOption('--receiver-network <network>', 'Receiver network')
+  .requiredOption('--customer-wallet-address <addr>', 'Customer wallet address')
+  .requiredOption('--customer-token <token>', 'Customer token')
+  .requiredOption('--customer-network <network>', 'Customer network')
   .requiredOption('--request-amount <amount>', 'Request amount in cents')
   .requiredOption('--amount-reference <ref>', 'Amount reference (sender or receiver)')
   .option('--cover-fees', 'Sender covers the fees', false)
@@ -775,13 +775,13 @@ const tos = program.command('tos').description('Initiate Terms of Service flow')
   .addHelpText('after', `
 Examples:
   $ blindpay tos initiate --idempotency-key <key>
-  $ blindpay tos initiate --idempotency-key <key> --receiver-id <id> --redirect-url https://example.com`)
+  $ blindpay tos initiate --idempotency-key <key> --customer-id <id> --redirect-url https://example.com`)
 
 tos
   .command('initiate')
   .description('Initiate a Terms of Service session and return a hosted URL')
   .requiredOption('--idempotency-key <key>', 'Idempotency key')
-  .option('--receiver-id <id>', 'Receiver ID')
+  .option('--customer-id <id>', 'Customer ID')
   .option('--redirect-url <url>', 'Redirect URL after acceptance')
   .option('--json', 'Output as JSON', false)
   .action(opts => initiateTos(opts))

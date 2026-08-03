@@ -1075,9 +1075,9 @@ export async function trackTransfer(id: string, options: { json: boolean }) {
 export async function createTransferQuote(options: {
   walletId: string
   senderToken: string
-  receiverWalletAddress: string
-  receiverToken: string
-  receiverNetwork: string
+  customerWalletAddress: string
+  customerToken: string
+  customerNetwork: string
   requestAmount: string
   amountReference: string
   coverFees?: boolean
@@ -1089,9 +1089,9 @@ export async function createTransferQuote(options: {
     const body: Record<string, any> = {
       wallet_id: options.walletId,
       sender_token: options.senderToken,
-      receiver_wallet_address: options.receiverWalletAddress,
-      receiver_token: options.receiverToken,
-      receiver_network: options.receiverNetwork,
+      customer_wallet_address: options.customerWalletAddress,
+      customer_token: options.customerToken,
+      customer_network: options.customerNetwork,
       request_amount: parseAmount(options.requestAmount, 0, options.json),
       amount_reference: options.amountReference,
       cover_fees: options.coverFees ?? false,
@@ -1119,11 +1119,11 @@ export async function getInstanceFees(options: { json: boolean }) {
 }
 
 // Terms of Service
-export async function initiateTos(options: { idempotencyKey: string, receiverId?: string, redirectUrl?: string, json: boolean }) {
+export async function initiateTos(options: { idempotencyKey: string, customerId?: string, redirectUrl?: string, json: boolean }) {
   try {
     const ctx = resolveContext()
     const body: Record<string, any> = { idempotency_key: options.idempotencyKey }
-    if (options.receiverId !== undefined) body.receiver_id = options.receiverId
+    if (options.customerId !== undefined) body.customer_id = options.customerId
     if (options.redirectUrl !== undefined) body.redirect_url = options.redirectUrl
     const res = await apiPost<{ url: string }>(ctx, `/v1/e/instances/${ctx.instanceId}/tos`, body)
     if (!options.json) clack.log.success(`Open this URL to accept the Terms of Service:\n${res.url}`)
