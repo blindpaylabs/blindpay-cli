@@ -358,6 +358,7 @@ quotes
   .option('--network <network>', 'Blockchain network', 'base')
   .option('--token <token>', 'Token (USDC, USDT, USDB)', 'USDC')
   .option('--amount <amount>', 'Amount in cents', '1000')
+  .option('--refund-wallet-address <value>', 'Refund Wallet Address (added by api-sync)')
   .option('--json', 'Output as JSON', false)
   .action(opts => createQuote(opts))
 
