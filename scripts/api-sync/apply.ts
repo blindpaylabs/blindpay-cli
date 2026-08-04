@@ -76,6 +76,15 @@ export function applyResourcesField(src: string, change: ApplicableChange): stri
   const requestIndent = leadingWhitespace(lines[requestIdx])
   lines.splice(requestIdx, 0, `${requestIndent}if (options.${fieldCamel} !== undefined) body.${change.field} = options.${fieldCamel}`)
 
+  // The pass-through line above assigns a key that isn't in body's initial
+  // literal, so body needs a permissive type or TS rejects the assignment
+  // (an untyped `const body = {...}` infers a closed object type). Widen it
+  // the same way hand-written conditional-field functions already do.
+  const bodyDeclRe = /^(\s*)const body = /
+  const bodyDeclIdx = lines.findIndex(l => bodyDeclRe.test(l))
+  if (bodyDeclIdx !== -1)
+    lines[bodyDeclIdx] = lines[bodyDeclIdx].replace('const body = ', 'const body: Record<string, any> = ')
+
   const patchedFn = lines.join('\n')
   return src.slice(0, declIdx) + patchedFn + src.slice(fnEnd)
 }

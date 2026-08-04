@@ -35,6 +35,27 @@ describe('applyResourcesField', () => {
     expect(patched).toContain('externalId?: string')
     expect(patched).toContain('if (options.externalId !== undefined) body.external_id = options.externalId')
   })
+
+  // Regression: createQuote's body starts as a plain object literal
+  // (`const body = {...}`), not `Record<string, any>`. Assigning a new key
+  // to it after the fact doesn't typecheck (TS2339), which is exactly what
+  // broke CI when this generator added refund_wallet_address to it.
+  test('widens an untyped "const body = {" to Record<string, any> so the new field assignment typechecks', () => {
+    const change: ApplicableChange = { resource: 'quotes', op: 'create', fn: 'createQuote', field: 'refund_wallet_address', type: 'string', required: false }
+    const patched = applyResourcesField(real('src/commands/resources.ts'), change)
+    const fnStart = patched.indexOf('export async function createQuote(')
+    const fnRegion = patched.slice(fnStart, patched.indexOf('export async function', fnStart + 1))
+    expect(fnRegion).toContain('const body: Record<string, any> = {')
+    expect(fnRegion).toContain('if (options.refundWalletAddress !== undefined) body.refund_wallet_address = options.refundWalletAddress')
+  })
+
+  test('leaves an already-typed "const body: Record<string, any> =" untouched', () => {
+    const change: ApplicableChange = { resource: 'bank_accounts', op: 'create', fn: 'createBankAccount', field: 'clabe', type: 'string', required: false }
+    const patched = applyResourcesField(real('src/commands/resources.ts'), change)
+    const fnStart = patched.indexOf('export async function createBankAccount(')
+    const fnRegion = patched.slice(fnStart, patched.indexOf('export async function', fnStart + 1))
+    expect(fnRegion).not.toContain('Record<string, any> = Record<string, any>')
+  })
 })
 
 describe('applyIndexOption', () => {
