@@ -96,6 +96,7 @@ const schemas: ResourceSchema[] = [
         { name: 'network', type: 'string', required: false, description: 'Blockchain network', default: 'base' },
         { name: 'token', type: 'string', required: false, description: 'Stablecoin token', default: 'USDC', enum: ['USDC', 'USDT', 'USDB'] },
         { name: 'amount', type: 'number', required: false, description: 'Amount in cents', default: '1000' },
+        { name: 'refund_wallet_address', type: 'string', required: false, description: 'Refund Wallet Address (added by api-sync)' },
       ],
     },
   },

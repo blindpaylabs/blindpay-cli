@@ -515,16 +515,18 @@ export async function createQuote(options: {
   network?: string
   token?: string
   amount?: string
+  refundWalletAddress?: string
   json: boolean
 }) {
   try {
     const ctx = resolveContext()
-    const body = {
+    const body: Record<string, any> = {
       bank_account_id: options.bankAccountId,
       network: options.network || 'base',
       token: options.token || 'USDC',
       request_amount: parseAmount(options.amount, 1000, options.json),
     }
+    if (options.refundWalletAddress !== undefined) body.refund_wallet_address = options.refundWalletAddress
     const quote = await apiPost<{ id: string, sender_amount: number, receiver_amount: number, token?: string, currency?: string }>(ctx, `${instancePath(ctx)}/quotes`, body)
     const token = quote.token ?? 'USDC'
     const currency = (quote as any).currency ?? 'USD'
