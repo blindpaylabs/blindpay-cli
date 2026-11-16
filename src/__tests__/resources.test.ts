@@ -547,6 +547,23 @@ describe('Partner Fees', () => {
     })
   })
 
+  test('sends decimal fees as whole cents and basis points', async () => {
+    mockResponse.body = { id: 'pf_new' }
+    await resources.createPartnerFee({
+      payinPercentage: '0.07',
+      payinFlat: '1.15',
+      payoutPercentage: '2.55',
+      payoutFlat: '0.29',
+      json: true,
+    })
+    expect(lastCall().body).toMatchObject({
+      payin_percentage_fee: 7,
+      payin_flat_fee: 115,
+      payout_percentage_fee: 255,
+      payout_flat_fee: 29,
+    })
+  })
+
   test('deletes a partner fee', async () => {
     mockResponse.body = { success: true }
     await resources.deletePartnerFee('pf_1', { json: true })

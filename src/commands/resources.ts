@@ -613,7 +613,7 @@ export async function createPartnerFee(options: {
       if (val === undefined) return 0
       const n = Number(val)
       if (!Number.isFinite(n) || n < 0) exitWithError(`Invalid ${label}: "${val}". Must be a non-negative number.`, 1, options.json)
-      return n * 100
+      return Math.round(n * 100)
     }
     const body: Record<string, any> = {
       name: options.name || 'CLI Partner Fee',
